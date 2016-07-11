@@ -2,26 +2,26 @@ import struct
 import os
 import time
 
-CRC8Table=[
-  0, 94, 188, 226, 97, 63, 221, 131, 194, 156, 126, 32, 163, 253, 31, 65,
-  157, 195, 33, 127, 252, 162, 64, 30, 95, 1, 227, 189, 62, 96, 130, 220,
-  35, 125, 159, 193, 66, 28, 254, 160, 225, 191, 93, 3, 128, 222, 60, 98,
-  190, 224, 2, 92, 223, 129, 99, 61, 124, 34, 192, 158, 29, 67, 161, 255,
-  70, 24, 250, 164, 39, 121, 155, 197, 132, 218, 56, 102, 229, 187, 89, 7,
-  219, 133, 103, 57, 186, 228, 6, 88, 25, 71, 165, 251, 120, 38, 196, 154,
-  101, 59, 217, 135, 4, 90, 184, 230, 167, 249, 27, 69, 198, 152, 122, 36,
-  248, 166, 68, 26, 153, 199, 37, 123, 58, 100, 134, 216, 91, 5, 231, 185,
-  140, 210, 48, 110, 237, 179, 81, 15, 78, 16, 242, 172, 47, 113, 147, 205,
-  17, 79, 173, 243, 112, 46, 204, 146, 211, 141, 111, 49, 178, 236, 14, 80,
-  175, 241, 19, 77, 206, 144, 114, 44, 109, 51, 209, 143, 12, 82, 176, 238,
-  50, 108, 142, 208, 83, 13, 239, 177, 240, 174, 76, 18, 145, 207, 45, 115,
-  202, 148, 118, 40, 171, 245, 23, 73, 8, 86, 180, 234, 105, 55, 213, 139,
-  87, 9, 235, 181, 54, 104, 138, 212, 149, 203, 41, 119, 244, 170, 72, 22,
-  233, 183, 85, 11, 136, 214, 52, 106, 43, 117, 151, 201, 74, 20, 246, 168,
-  116, 42, 200, 150, 21, 75, 169, 247, 182, 232, 10, 84, 215, 137, 107, 53
+CRC8Table = [
+    0, 94, 188, 226, 97, 63, 221, 131, 194, 156, 126, 32, 163, 253, 31, 65,
+    157, 195, 33, 127, 252, 162, 64, 30, 95, 1, 227, 189, 62, 96, 130, 220,
+    35, 125, 159, 193, 66, 28, 254, 160, 225, 191, 93, 3, 128, 222, 60, 98,
+    190, 224, 2, 92, 223, 129, 99, 61, 124, 34, 192, 158, 29, 67, 161, 255,
+    70, 24, 250, 164, 39, 121, 155, 197, 132, 218, 56, 102, 229, 187, 89, 7,
+    219, 133, 103, 57, 186, 228, 6, 88, 25, 71, 165, 251, 120, 38, 196, 154,
+    101, 59, 217, 135, 4, 90, 184, 230, 167, 249, 27, 69, 198, 152, 122, 36,
+    248, 166, 68, 26, 153, 199, 37, 123, 58, 100, 134, 216, 91, 5, 231, 185,
+    140, 210, 48, 110, 237, 179, 81, 15, 78, 16, 242, 172, 47, 113, 147, 205,
+    17, 79, 173, 243, 112, 46, 204, 146, 211, 141, 111, 49, 178, 236, 14, 80,
+    175, 241, 19, 77, 206, 144, 114, 44, 109, 51, 209, 143, 12, 82, 176, 238,
+    50, 108, 142, 208, 83, 13, 239, 177, 240, 174, 76, 18, 145, 207, 45, 115,
+    202, 148, 118, 40, 171, 245, 23, 73, 8, 86, 180, 234, 105, 55, 213, 139,
+    87, 9, 235, 181, 54, 104, 138, 212, 149, 203, 41, 119, 244, 170, 72, 22,
+    233, 183, 85, 11, 136, 214, 52, 106, 43, 117, 151, 201, 74, 20, 246, 168,
+    116, 42, 200, 150, 21, 75, 169, 247, 182, 232, 10, 84, 215, 137, 107, 53
 ]
 
-CRC16Table=[
+CRC16Table = [
     0x0000, 0x1189, 0x2312, 0x329b, 0x4624, 0x57ad, 0x6536, 0x74bf,
     0x8c48, 0x9dc1, 0xaf5a, 0xbed3, 0xca6c, 0xdbe5, 0xe97e, 0xf8f7,
     0x1081, 0x0108, 0x3393, 0x221a, 0x56a5, 0x472c, 0x75b7, 0x643e,
@@ -56,8 +56,6 @@ CRC16Table=[
     0x7bc7, 0x6a4e, 0x58d5, 0x495c, 0x3de3, 0x2c6a, 0x1ef1, 0x0f78
 ]
 
-
-
 crc8 = 0
 crc8_init = 0x77
 crc16_init_rec = 0x5281
@@ -66,22 +64,25 @@ cnt = 60
 crc8_err = 0
 crc16_err = 0
 
+
 def dump_hex(buff):
     remain = len(buff)
     while remain:
-        print "%.2x"%ord(buff[-remain]),
+        print "%.2x" % ord(buff[-remain]),
         remain = remain - 1
-        
+
 
 class v1Error(Exception):
     '''Ublox error class'''
+
     def __init__(self, msg):
         Exception.__init__(self, msg)
         self.message = msg
 
 
-class   Desc:
+class Desc:
     '''class used to describe the layout of a UBlox message'''
+
     def __init__(self, name, msg_format, fields=[], count_field=None, format2=None, fields2=None):
         self.name = name
         self.msg_format = msg_format
@@ -90,15 +91,17 @@ class   Desc:
         self.format2 = format2
         self.fields2 = fields2
 
+
 def chkCRC8(bytes):
     crc8 = crc8_init
     ret = 0
-    
+
     for byte in bytes:
         ret = crc8 ^ ord(byte)
         crc8 = CRC8Table[ret]
 
     return crc8
+
 
 def chkCRC16(bytes):
     crc16 = crc16_init_com
@@ -106,16 +109,18 @@ def chkCRC16(bytes):
 
     for byte in bytes:
         ret = ord(byte)
-        crc16 = (crc16>>8 & 0xff) ^ CRC16Table[(0xff&crc16)^ret]
+        crc16 = (crc16 >> 8 & 0xff) ^ CRC16Table[(0xff & crc16) ^ ret]
 
     return crc16
 
+
 def getHeader(bytes):
     index = 0
-    for idx,byte in enumerate(bytes):
+    for idx, byte in enumerate(bytes):
         if byte == '\x55':
             return idx
     return -1
+
 
 class V1_msg:
     def __init__(self):
@@ -131,18 +136,23 @@ class V1_msg:
 
     def sender(self):
         return ord(self._buf[4])
+
     def recver(self):
         return ord(self._buf[5])
+
     def seqNum(self):
-        (seq,) = struct.unpack("<h",self._buf[6:8])
+        (seq,) = struct.unpack("<h", self._buf[6:8])
         return seq
+
     def cmdType(self):
         return ord(self._buf[8])
+
     def cmdSet(self):
         return ord(self._buf[9])
+
     def cmdID(self):
         return ord(self._buf[10])
-    
+
     def check_crc8(self):
         if chkCRC8(self._buf[0:4]) == 0:
             return True
@@ -159,7 +169,7 @@ class V1_msg:
 
     def checksum_valid(self):
         return self.check_crc8() and self.check_crc16()
-    
+
     def head_synced(self):
         if len(self._buf) == 0:
             return False
@@ -176,33 +186,33 @@ class V1_msg:
     def msg_len(self):
         if not self.check_crc8():
             return 0
-        (len_ver,) = struct.unpack("<h",self._buf[1:3])
+        (len_ver,) = struct.unpack("<h", self._buf[1:3])
         return len_ver & 0x3ff
-    
-    def add(self,bytes):
+
+    def add(self, bytes):
         self._buf += bytes
-        while not self.head_synced() and len(self._buf)>0:
+        while not self.head_synced() and len(self._buf) > 0:
             self._buf = self._buf[1:]
         if self.bytes_expected() < 0:
             self._buf = ""
-            
+
     def bytes_expected(self):
         if len(self._buf) < 4:
             return 12 - len(self._buf)
         return self.msg_len() - len(self._buf)
 
     def valid(self):
-        if len(self._buf)>12 and self.bytes_expected() == 0 and self.checksum_valid():
+        if len(self._buf) > 12 and self.bytes_expected() == 0 and self.checksum_valid():
             return True
         else:
-            #print self.bytes_expected()
-            if len(self._buf)>12 and self.bytes_expected() == 0:
+            # print self.bytes_expected()
+            if len(self._buf) > 12 and self.bytes_expected() == 0:
                 self._buf = ""
             return False
 
-class DJI_dev:
 
-    def __init__(self,devid,index,port,baudrate=115200, timeout=0):
+class DJI_dev:
+    def __init__(self, devid, index, port, baudrate=115200, timeout=0):
         self.serial_device = port
         self.baudrate = baudrate
         self.dev_id = devid
@@ -212,7 +222,7 @@ class DJI_dev:
             self.dev = open(self.serial_device, mode='rb')
         else:
             import serial
-            self.dev = serial.Serial(self.serial_device,self.baudrate)
+            self.dev = serial.Serial(self.serial_device, self.baudrate)
 
     def close(self):
         self.dev.close()
@@ -221,22 +231,22 @@ class DJI_dev:
     def write(self, buf):
         return self.dev.write(buf)
 
-    def read(self,n):
+    def read(self, n):
         return self.dev.read(n)
 
-    def send(self,msg):
+    def send(self, msg):
         if not msg.valid():
             print "msg to be sent not valid"
             self.close()
             return
-        self.write(msg._buf)    
+        self.write(msg._buf)
 
     def special_handling(self, msg):
         if msg.cmdSet() == 0x00 and msg.cmdID() == 0x0e:
             print msg._buf[12:-2]
 
-        #if msg.cmdSet() == 0x00 and msg.cmdID() == 0x0c:
-         #   rtnCode,
+            # if msg.cmdSet() == 0x00 and msg.cmdID() == 0x0c:
+            #   rtnCode,
 
     def receive_msg(self):
         msg = V1_msg()
@@ -249,25 +259,23 @@ class DJI_dev:
             msg.add(b)
             if msg.valid():
                 self.special_handling(msg)
-                #msg._buf = ""
+                # msg._buf = ""
                 return msg
 
-    def send_msg(self,sender,cmdset,cmdid,payload):
+    def send_msg(self, sender, cmdset, cmdid, payload):
         msg = V1_msg()
         seq = 0
-        cmdtype = 0x01<<5
+        cmdtype = 0x01 << 5
         length = len(payload) + 13
-        length = length | (0x01<<10)
-        receiver = (self.dev_id&0x1f) | ((self.dev_index&0x7)<<5)
-        msg._buf = struct.pack('<Bh',0x55,length)
+        length = length | (0x01 << 10)
+        receiver = (self.dev_id & 0x1f) | ((self.dev_index & 0x7) << 5)
+        msg._buf = struct.pack('<Bh', 0x55, length)
         chk8 = chkCRC8(msg._buf[0:3])
-        msg._buf += struct.pack('<BBBhBBB',chk8,sender,receiver,seq,cmdtype,cmdset,cmdid)
+        msg._buf += struct.pack('<BBBhBBB', chk8, sender, receiver, seq, cmdtype, cmdset, cmdid)
         msg._buf += payload
-        
+
         chk16 = chkCRC16(msg._buf)
-        msg._buf += struct.pack('<h',chk16)
-        #print "length:",len(msg._buf)
-        #dump_hex(msg._buf)
+        msg._buf += struct.pack('<h', chk16)
+        # print "length:",len(msg._buf)
+        # dump_hex(msg._buf)
         self.send(msg)
-        
-        
