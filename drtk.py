@@ -17,7 +17,7 @@ class RTKadapter:
         self.comm_dev.send_msg(0x0a,0x00,0x0c,payload="")
         
     def query_version(self):
-        self.comm_dev.send_msg(0x0a,0x00,0x0b,payload="")
+        self.comm_dev.send_msg(0x0a,0x00,0x01,payload="")
 
     def enter_msd_mode(self):
         self.comm_dev.send_msg(0x0a,0x03,0x39,payload="")

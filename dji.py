@@ -217,6 +217,7 @@ class DJI_dev:
         self.baudrate = baudrate
         self.dev_id = devid
         self.dev_index = index
+        self.receiver = (devid & 0x1f) | ((index & 0x7) << 5)
 
         if os.path.isfile(self.serial_device):
             self.dev = open(self.serial_device, mode='rb')
@@ -268,10 +269,9 @@ class DJI_dev:
         cmdtype = 0x01 << 5
         length = len(payload) + 13
         length = length | (0x01 << 10)
-        receiver = (self.dev_id & 0x1f) | ((self.dev_index & 0x7) << 5)
         msg._buf = struct.pack('<Bh', 0x55, length)
         chk8 = chkCRC8(msg._buf[0:3])
-        msg._buf += struct.pack('<BBBhBBB', chk8, sender, receiver, seq, cmdtype, cmdset, cmdid)
+        msg._buf += struct.pack('<BBBhBBB', chk8, sender, self.receiver, seq, cmdtype, cmdset, cmdid)
         msg._buf += payload
 
         chk16 = chkCRC16(msg._buf)

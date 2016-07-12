@@ -28,9 +28,9 @@ def unpack_record(bytes):
             buff += chr(ord(val) ^ key)
         # print buff
         unpack_unicore(buff)
-        if data_type == 0x8f7:
-            uniSync, msgID, msgType = struct.unpack("<IhB", buff[0:7])
-            print ">base range here [%x][%d][%d]<" % (uniSync, msgID, msgType)
+        # if data_type == 0x8f7:
+        #     uniSync, msgID, msgType = struct.unpack("<IhB", buff[0:7])
+        #     print ">base range here [%x][%d][%d]<" % (uniSync, msgID, msgType)
 
             # uniSync,msgID,msgType,portAddr,msgLen,seq = struct.unpack("<IhBBhh",bytes[10:22])
             # print "%.8x msgID:%.4x msgType:%.2x"%(uniSync,msgID,msgType)
@@ -43,7 +43,7 @@ def unpack_unicore(bytes):
     # print "msgID:%.4x len:%.4x seq:%.4x"%(msgID,msgLen,seq)
     if msgID == 42:
         solStt, posType, lat, lon, hgt, undulation, trkSVs, solSVs = struct.unpack("<IIdddfBB", bytes[28:66])
-        seq = ["[BestPos],%d,%d,%.8f,%.8f,%f,%d,%d,%d\n" % (solStt, posType, lat, lon, hgt, undulation, trkSVs, solSVs)]
+        seq = ["[BestPos],%d,%d,%.8f,%.8f,%f,%d,%d,%d,%d\n" % (solStt, posType, lat, lon, hgt, undulation, trkSVs, solSVs, ms)]
         f.writelines(seq)
     if msgID == 283:
         seq = ["[BaseRange],%d,%d\n" % (week, ms)]
@@ -51,7 +51,7 @@ def unpack_unicore(bytes):
     return 0
 
 
-def parse_v1_pack(buff, mode):
+def parse_v1_pack(buff, handler):
     search_idx = 0
 
     while search_idx < len(buff):
@@ -76,10 +76,11 @@ def parse_v1_pack(buff, mode):
         pack_1 = buff[headBegin:headBegin + length]
         if length + headBegin > len(buff):
             return pack_1
-        if mode == 0:
-            unpack_record(pack_1)
-        else:
-            unpack_v1_comm(pack_1)
+        # if mode == 0:
+        #     unpack_record(pack_1)
+        # else:
+        #     unpack_v1_comm(pack_1)
+        handler(pack_1)
 
         search_idx = headBegin + length
         crc16_chk = chkCRC16(pack_1)

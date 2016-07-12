@@ -4,11 +4,12 @@ import time
 import shutil
 import os
 
+
 def comscan():
     import serial
     available = []
     for i in range(256):
-        com = "com%d"%i
+        com = "com%d" % i
         try:
             s = serial.Serial(com)
             available.append(com)
@@ -17,15 +18,17 @@ def comscan():
             pass
     print "available comm:",
     for port in available:
-        print port,",",
+        print port, ",",
     print ""
     return available
+
 
 def recv_loop():
     while True:
         msg = dev.receive_msg()
 
-def show_menu():
+
+def show_menu(rtk_adpt):
     btn = raw_input("1,reboot\r\n2,enter msd mode\r\n3,show version\r\n4,print log\r\n")
     if btn == "1":
         rtk_adpt.reboot()
@@ -38,12 +41,13 @@ def show_menu():
     if btn == "5":
         rtk_adpt.format_sd()
 
-def run_test(adapter,repeat,timeout):
+
+def run_test(adapter, repeat, timeout):
     inited = False;
     repeat_times = repeat
     state = 0
-    
-    while repeat_times>0:
+
+    while repeat_times > 0:
         if not inited:
             print "initializing test\r\nformatting..."
             adapter.format_sd()
@@ -52,34 +56,38 @@ def run_test(adapter,repeat,timeout):
             print "start test!"
         for i in range(timeout):
             time.sleep(1)
-            print "loop[%d], %ds/%ds\r"%(repeat-repeat_times+1,i,timeout),
-        print "loop[%d] is done,rebooting..."%(repeat-repeat_times+1)
-        #adapter.reboot()
-        repeat_times = repeat_times -1
+            print "loop[%d], %ds/%ds\r" % (repeat - repeat_times + 1, i, timeout),
+        print "loop[%d] is done,rebooting..." % (repeat - repeat_times + 1)
+        adapter.reboot()
+        time.sleep(25)
+        repeat_times = repeat_times - 1
     print "test sequence complete!"
     adapter.enter_msd_mode()
     time.sleep(5)
-    #os.mkdir("logs\")
-    shutil.copy("F:\FLY000.DAT",".\logs")
+    # os.mkdir("logs\")
+    shutil.copy("F:\FLY000.DAT", ".\logs")
     print "reading data..."
     print "all clear!"
     raw_input("press enter to quit")
 
 
-ports = comscan()
-if ports is not None:
-    port = ports[0]
-else:
-    print "Holy shit, no com port!"
-baudrate = 115200
-timeout = 2
+def analyse_log():
+    analysis_file = open("./logs/analysis.txt", "w")
 
-dev = dji.DJI_dev(0x1e,0x07,port,baudrate,timeout)
-rtk_adpt = RTKadapter(dev)
-
-run_test(rtk_adpt,10,5)
+    analysis_file.writelines("analysis for FLY000.DAT\n")
 
 
+if __name__ == '__main__':
+    ports = comscan()
+    if ports is not None:
+        port = ports[0]
+    else:
+        print "Holy shit, no com port!"
 
+    dev = dji.DJI_dev(0x1e, 0x07, port, 115200, 2)
+    print "dev receiver:0x%x"%dev.receiver
+    rtk_adpt = RTKadapter(dev)
 
-    
+    # run_test(rtk_adpt, 10, 5)
+    # analyse_log()
+    show_menu(rtk_adpt)
