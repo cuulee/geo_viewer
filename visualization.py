@@ -8,15 +8,18 @@ import string
 import tkFileDialog
 from decimal import Decimal
 
-fig = plt.figure()
-fig.suptitle('holy')
-ax = fig.add_subplot(2, 2, 1)
-ay = fig.add_subplot(2, 2, 2)
-fig.add_subplot(2,2,3)
-fig.add_subplot(2,2,4)
+
+# fig.add_subplot(2,2,3)
+# fig.add_subplot(2,2,4)
 
 
 def plot_coord(f, color):
+    fig = plt.figure(figsize=(10, 8))
+    fig.suptitle(f.name)
+    fig.canvas.set_window_title(f.name)
+    a1 = fig.add_subplot(2, 2, 1)
+    a2 = fig.add_subplot(2, 2, 2)
+
     lat0 = 0.0
     lon0 = 0.0
     inited = 0
@@ -55,30 +58,32 @@ def plot_coord(f, color):
 
     minor_ticks_x = np.arange(int(min(x)) - 1, int(max(x)) + 1, 1)
     minor_ticks_y = np.arange(int(min(y)) - 1, int(max(y)) + 1, 1)
-    ax.set_xticks(minor_ticks_x, minor=True)
-    ax.set_yticks(minor_ticks_y, minor=True)
-    plt.subplot(221)
+    a1.set_xticks(minor_ticks_x, minor=True)
+    a1.set_yticks(minor_ticks_y, minor=True)
+    plt.subplot(2, 2, 1, aspect=1)
     plt.title('position cloud')
     plt.grid(True, 'minor', 'both')
     plt.plot(x, y, 'o', color=color)
 
-    plt.subplot(222)
+    plt.subplot(2, 2, 2)
     plt.title('PosType (TTFF=%ds, fixRate=%f)' % (ttff, narrowInt_cnt / total_cnt))
-    ay.set_ylim(0, 55)
+    a2.set_ylim(0, 55)
     minor_ticks_y = np.arange(0, 55, 1)
-    ay.set_yticks(minor_ticks_y, minor=True)
+    a2.set_yticks(minor_ticks_y, minor=True)
     plt.grid(True, 'minor', 'both')
     plt.plot(postype)
 
-    plt.subplot(223)
+    plt.subplot(2, 2, 3)
     plt.title('packet time diff')
     plt.plot(ms)
 
-    plt.subplot(224)
+    plt.subplot(2, 2, 4)
     plt.title('cnr average')
 
+    pic = "." + f.name.split(".")[1] + ".png"
 
-    plt.show()
+    plt.savefig(pic, format='png')
+    # plt.show()
 
 
 def plot_linechart(f, color):

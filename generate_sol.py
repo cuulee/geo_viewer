@@ -19,7 +19,7 @@ def unpack_v1_comm(bytes):
         print bytes[12:-2]
 
 
-def unpack_record(bytes):
+def unpack_record(bytes, f_out):
     buff = ""
     sync, length, crc8, data_type, key = struct.unpack("<BhBhB", bytes[0:7])
     if data_type in unicore_msgType_list:
@@ -27,7 +27,7 @@ def unpack_record(bytes):
         for val in bytes[10:10 + length]:
             buff += chr(ord(val) ^ key)
         # print buff
-        unpack_unicore(buff)
+        unpack_unicore(buff, f_out)
         # if data_type == 0x8f7:
         #     uniSync, msgID, msgType = struct.unpack("<IhB", buff[0:7])
         #     print ">base range here [%x][%d][%d]<" % (uniSync, msgID, msgType)
@@ -36,7 +36,7 @@ def unpack_record(bytes):
             # print "%.8x msgID:%.4x msgType:%.2x"%(uniSync,msgID,msgType)
 
 
-def unpack_unicore(bytes):
+def unpack_unicore(bytes, f_out):
     # uniSync,msgID,msgType,portAddr,msgLen,seq = struct.unpack("<IhBBhh",bytes[0:12])
     uniSync, msgID, msgType, portAddr, msgLen, seq, idleTime, timeStt, week, ms, rsv2, timeOffset, rsv3 = struct.unpack(
         "<IhBBhhBBhIIhh", bytes[0:28])
@@ -44,15 +44,16 @@ def unpack_unicore(bytes):
     if msgID == 42:
         solStt, posType, lat, lon, hgt, undulation, trkSVs, solSVs = struct.unpack("<IIdddfBB", bytes[28:66])
         seq = ["[BestPos],%d,%d,%.8f,%.8f,%f,%d,%d,%d,%d\n" % (solStt, posType, lat, lon, hgt, undulation, trkSVs, solSVs, ms)]
-        f.writelines(seq)
+        f_out.writelines(seq)
     if msgID == 283:
         seq = ["[BaseRange],%d,%d\n" % (week, ms)]
-        f.writelines(seq)
+        f_out.writelines(seq)
     return 0
 
 
-def parse_v1_pack(buff, handler):
+def parse_v1_pack(buff, handler, f_out):
     search_idx = 0
+    pack_1 = ""
 
     while search_idx < len(buff):
         headBegin = getHeader(buff[search_idx:-1])
@@ -71,7 +72,7 @@ def parse_v1_pack(buff, handler):
         # print "crc8:%.2x"%crc8_chk
         search_idx = headBegin + 1
         if crc8_chk != 0:
-            print "crc8 err", search_idx
+            # print "crc8 err", search_idx
             continue
         pack_1 = buff[headBegin:headBegin + length]
         if length + headBegin > len(buff):
@@ -80,7 +81,7 @@ def parse_v1_pack(buff, handler):
         #     unpack_record(pack_1)
         # else:
         #     unpack_v1_comm(pack_1)
-        handler(pack_1)
+        handler(pack_1, f_out)
 
         search_idx = headBegin + length
         crc16_chk = chkCRC16(pack_1)
