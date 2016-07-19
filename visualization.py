@@ -13,44 +13,67 @@ from decimal import Decimal
 # fig.add_subplot(2,2,4)
 
 
-def plot_coord(f, color):
+def plot_coord(f):
     fig = plt.figure(figsize=(10, 8))
     fig.suptitle(f.name)
     fig.canvas.set_window_title(f.name)
     a1 = fig.add_subplot(2, 2, 1)
     a2 = fig.add_subplot(2, 2, 2)
+    a3 = fig.add_subplot(2, 2, 3)
+    a4 = fig.add_subplot(2, 2, 4)
 
     lat0 = 0.0
     lon0 = 0.0
-    inited = 0
+    inited1 = 0
+    inited2 = 0
     lat = []
     lon = []
     x = []
     y = []
+    x_float = []
+    y_float = []
+    x_single = []
+    y_single = []
     ms = []
+    rtkTrkSVs = []
+    rtkSolSVs = []
     ttff = 0
     postype = []
     narrowInt_cnt = 0
     total_cnt = 1
 
-    time_start = int(f.readline().split(",")[9])
-    last_ms = time_start
     for line in f:
         if line.split(",")[0] != "[BestPos]":
             continue
-        if inited:
+
+        posType = line.split(",")[2]
+        if inited1 == 0:
+            time_start = int(line.split(",")[9])
+            last_ms = time_start
+            inited1 = 1
+        else:
             total_cnt += 1.0
-        postype.append(line.split(",")[2])
+        postype.append(posType)
+        rtkTrkSVs.append(line.split(",")[7])
+        rtkSolSVs.append(line.split(",")[8])
         ms.append(int(line.split(",")[9]) - last_ms)
         last_ms = int(line.split(",")[9])
-        if line.split(",")[2] != "50":
+        if posType != "50":
+            if inited2 == 0:
+                continue
+            if posType >= 32:
+                x_float.append(111195*(float(line.split(",")[3]) - lat0))
+                y_float.append(111195 * math.cos(float(line.split(",")[3])) * (float(line.split(",")[4]) - lon0))
+            if posType == 16:
+                x_single.append(111195 * (float(line.split(",")[3]) - lat0))
+                y_single.append(111195 * math.cos(float(line.split(",")[3])) * (float(line.split(",")[4]) - lon0))
             continue
         narrowInt_cnt += 1.0
-        if inited == 0:
+        if inited2 == 0:
             lat0 = float(line.split(",")[3])
             lon0 = float(line.split(",")[4])
             ttff = (int(line.split(",")[9]) - time_start) / 1000
-            inited = 1
+            inited2 = 1
         lat.append(float(line.split(",")[3]))
         lon.append(float(line.split(",")[4]))
         x.append(111195 * (lat[-1] - lat0))
@@ -63,7 +86,9 @@ def plot_coord(f, color):
     plt.subplot(2, 2, 1, aspect=1)
     plt.title('position cloud')
     plt.grid(True, 'minor', 'both')
-    plt.plot(x, y, 'o', color=color)
+    plt.plot(x, y, 'o', color='green')
+    plt.plot(x_float, y_float, 'o', color='purple')
+    plt.plot(x_single, y_single, 'o', color='yellow')
 
     plt.subplot(2, 2, 2)
     plt.title('PosType (TTFF=%ds, fixRate=%f)' % (ttff, narrowInt_cnt / total_cnt))
@@ -71,20 +96,77 @@ def plot_coord(f, color):
     minor_ticks_y = np.arange(0, 55, 1)
     a2.set_yticks(minor_ticks_y, minor=True)
     plt.grid(True, 'minor', 'both')
-    plt.plot(postype)
+    a2.plot(postype)
 
     plt.subplot(2, 2, 3)
     plt.title('packet time diff')
-    plt.plot(ms)
+    a3.set_ylim(-800,1000)
+    a3.plot(ms)
 
     plt.subplot(2, 2, 4)
-    plt.title('cnr average')
+    plt.title('trk/sol SVs')
+    a4.plot(rtkTrkSVs, color="blue")
+    a4.plot(rtkSolSVs, color="green")
 
     pic = "." + f.name.split(".")[1] + ".png"
 
     plt.savefig(pic, format='png')
     # plt.show()
+    plt.close()
 
+
+def plot_MSM(f):
+    fig = plt.figure(figsize=(10, 8))
+    fig.suptitle(f.name)
+    fig.canvas.set_window_title(f.name)
+    a1 = fig.add_subplot(2, 2, 1)
+    a2 = fig.add_subplot(2, 2, 2)
+    a3 = fig.add_subplot(2, 2, 3)
+
+    gps_diff = []
+    glo_diff = []
+    bds_diff = []
+
+    last_gps_tow = 0
+    last_glo_tow = 0
+    last_bds_tow = 0
+
+    for line in f:
+        if line.split(",")[0] != "[MSM5]":
+            continue
+
+        msm_type = line.split(",")[1]
+
+        if msm_type == '1075':
+            gps_diff.append(int(line.split(",")[2]) - last_gps_tow)
+            last_gps_tow = int(line.split(",")[2])
+
+        if msm_type == '1085':
+            glo_diff.append(int(line.split(",")[2]) - last_glo_tow)
+            last_glo_tow = int(line.split(",")[2])
+
+        if msm_type == '1125':
+            bds_diff.append(int(line.split(",")[2]) - last_bds_tow)
+            last_bds_tow = int(line.split(",")[2])
+
+    plt.subplot(2, 2, 1)
+    plt.title('GPS packet time diff')
+    a1.set_ylim(-1, 10)
+    a1.plot(gps_diff)
+
+    plt.subplot(2, 2, 2)
+    plt.title('GLO packet time diff')
+    a2.set_ylim(-1, 10)
+    a2.plot(glo_diff)
+
+    plt.subplot(2, 2, 3)
+    plt.title('BDS packet time diff')
+    a3.set_ylim(-1, 10)
+    a3.plot(bds_diff)
+
+    pic = "." + f.name.split(".")[1] + "_lost" + ".png"
+    plt.savefig(pic, format='png')
+    plt.close()
 
 def plot_linechart(f, color):
     value_list = []
