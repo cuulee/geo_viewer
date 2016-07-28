@@ -19,6 +19,7 @@ class RequestHandler(SocketServer.BaseRequestHandler):
         if header_info[0] is 'server':
             ntrip_svr = NTRIPserver(self, header_info[1])
             caster.add_server(ntrip_svr)
+            self.request.sendall("ICY 200 OK")
         elif header_info[0] is 'client':
             ntrip_clt = NTRIPclient(self, header_info[1], header_info[4])
             caster.add_client(ntrip_clt)
@@ -81,7 +82,7 @@ def decode_ntrip_header(buff):
 
 
 class NTRIPcaster:
-    def __init__(self, host="127.0.0.1", server_port=50007, client_port=50008, max_server=1, max_client=1, name="C_DJI_NTRIP_1.0_2938"):
+    def __init__(self, host="0.0.0.0", server_port=50007, client_port=50008, max_server=1, max_client=1, name="C_DJI_NTRIP_1.0_2938"):
         self.running = False
         self.servers = []
         self.clients = []
