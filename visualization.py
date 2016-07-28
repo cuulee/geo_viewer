@@ -1,19 +1,14 @@
 import numpy as np
-import os
-import math
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MultipleLocator
 import math
-import string
-import tkFileDialog
-from decimal import Decimal
+import random
 
 
 # fig.add_subplot(2,2,3)
 # fig.add_subplot(2,2,4)
 
 
-def plot_coord(f):
+def plot_bestpos(f):
     fig = plt.figure(figsize=(10, 8))
     fig.suptitle(f.name)
     fig.canvas.set_window_title(f.name)
@@ -62,7 +57,7 @@ def plot_coord(f):
             if inited2 == 0:
                 continue
             if posType >= 32:
-                x_float.append(111195*(float(line.split(",")[3]) - lat0))
+                x_float.append(111195 * (float(line.split(",")[3]) - lat0))
                 y_float.append(111195 * math.cos(float(line.split(",")[3])) * (float(line.split(",")[4]) - lon0))
             if posType == 16:
                 x_single.append(111195 * (float(line.split(",")[3]) - lat0))
@@ -100,7 +95,7 @@ def plot_coord(f):
 
     plt.subplot(2, 2, 3)
     plt.title('packet time diff')
-    a3.set_ylim(-800,1000)
+    a3.set_ylim(-800, 1000)
     a3.plot(ms)
 
     plt.subplot(2, 2, 4)
@@ -168,6 +163,33 @@ def plot_MSM(f):
     plt.savefig(pic, format='png')
     plt.close()
 
+
+def plot_random():
+    fig = plt.figure(figsize=(10, 8))
+    a1 = fig.add_subplot(1, 3, 1)
+    a2 = fig.add_subplot(1, 3, 2)
+    a3 = fig.add_subplot(1, 3, 3)
+
+    x_rtk_cloud = 2 * (np.random.random(100) - 0.5)
+    y_rtk_cloud = 2 * (np.random.random(100) - 0.5)
+    x_dgps_cloud = 80 * (np.random.random(100) - 0.5)
+    y_dgps_cloud = 80 * (np.random.random(100) - 0.5)
+    x_single_clout = 1000 * (np.random.random(100) - 0.5)
+    y_single_clout = 1000 * (np.random.random(100) - 0.5)
+
+    a1.set_xlim(-500,500)
+    a1.set_ylim(-500, 500)
+    a2.set_xlim(-500, 500)
+    a2.set_ylim(-500, 500)
+    a3.set_xlim(-500, 500)
+    a3.set_ylim(-500, 500)
+    a1.plot(x_rtk_cloud, y_rtk_cloud,'o', color="green")
+    a2.plot(x_dgps_cloud, y_dgps_cloud,'o', color="green")
+    a3.plot(x_single_clout, y_single_clout,'o', color="green")
+
+    plt.show()
+
+
 def plot_linechart(f, color):
     value_list = []
 
@@ -176,5 +198,6 @@ def plot_linechart(f, color):
 
 
 if __name__ == '__main__':
-    f = open("pvt.sol")
-    plot_coord(f, "green")
+    # f = open("pvt.sol")
+    # plot_bestpos(f, "green")
+    plot_random()

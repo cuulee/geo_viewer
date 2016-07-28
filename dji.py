@@ -255,8 +255,9 @@ class DJI_dev:
             n = msg.bytes_expected()
             b = self.read(n)
             if not b:
-                time.sleep(0.01)
+                time.sleep(1)
                 continue
+                # return
             msg.add(b)
             if msg.valid():
                 self.special_handling(msg)

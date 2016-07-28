@@ -1,7 +1,7 @@
 import struct
 import time
 from dji import chkCRC8, chkCRC16, getHeader
-from RTCMv3_decode import decode_rtcm3_pack
+from RTCMv3_decode import decode_rtcm3_pack,generator
 
 buff_len = 1024
 # state = 0
@@ -23,7 +23,7 @@ def unpack_v1_comm(bytes):
         print bytes[12:-2]
 
 
-def unpack_record(bytes, generator):
+def unpack_record(bytes):
     buff = ""
     sync, length, crc8, data_type, key = struct.unpack("<BhBhB", bytes[0:7])
     if data_type in unicore_msgType_list:
@@ -31,19 +31,19 @@ def unpack_record(bytes, generator):
         for val in bytes[10:10 + length]:
             buff += chr(ord(val) ^ key)
         # print buff
-        unpack_unicore(buff, generator)
+        unpack_unicore(buff)
         # if data_type == 0x8f7:
         #     uniSync, msgID, msgType = struct.unpack("<IhB", buff[0:7])
         #     print ">base range here [%x][%d][%d]<" % (uniSync, msgID, msgType)
     if data_type in RTCM_msgType_list:
         for val in bytes[10:10 + length]:
             buff += chr(ord(val) ^ key)
-        unpack_rtcm(buff, generator)
+        unpack_rtcm(buff)
         # uniSync,msgID,msgType,portAddr,msgLen,seq = struct.unpack("<IhBBhh",bytes[10:22])
         # print "%.8x msgID:%.4x msgType:%.2x"%(uniSync,msgID,msgType)
 
 
-def unpack_unicore(bytes, generator):
+def unpack_unicore(bytes):
     # uniSync,msgID,msgType,portAddr,msgLen,seq = struct.unpack("<IhBBhh",bytes[0:12])
     uniSync, msgID, msgType, portAddr, msgLen, seq, idleTime, timeStt, week, ms, rsv2, timeOffset, rsv3 = struct.unpack(
         "<IhBBhhBBhIIhh", bytes[0:28])
@@ -60,12 +60,12 @@ def unpack_unicore(bytes, generator):
     return 0
 
 
-def unpack_rtcm(bytes, generator):
+def unpack_rtcm(bytes):
     # print "rtcm msm packet", ord(bytes[1]) + 1, "of", ord(bytes[0])
     # total_num = ord(bytes[0])
     # pack_num = ord(bytes[1])
 
-    cvt.input(bytes, generator)
+    cvt.input(bytes)
 
 
 class RTCMPack:
@@ -75,7 +75,7 @@ class RTCMPack:
         self.valid = False
         self._buff = ""
 
-    def input(self, buff, generator):
+    def input(self, buff):
         self.pack_idx = ord(buff[1])
         self.num_of_pack = ord(buff[0])
 
@@ -88,18 +88,18 @@ class RTCMPack:
                 self.valid = False
             else:
                 self.valid = True
-        self._output(generator)
+        self._output()
 
-    def _output(self, generator):
+    def _output(self):
         if self.valid:
-            decode_rtcm3_pack(self._buff, generator)
+            decode_rtcm3_pack(self._buff)
 
 
 def generate_msm_sol(type, tow):
     pass
 
 
-def parse_v1_pack(buff, handler, generator):
+def parse_v1_pack(buff, handler):
     search_idx = 0
     pack_1 = ""
 
@@ -129,7 +129,7 @@ def parse_v1_pack(buff, handler, generator):
         #     unpack_record(pack_1)
         # else:
         #     unpack_v1_comm(pack_1)
-        handler(pack_1, generator)
+        handler(pack_1)
 
         search_idx = headBegin + length
         crc16_chk = chkCRC16(pack_1)

@@ -17,6 +17,7 @@ import RTCMv2
 from bitstring import BitStream
 
 max_sats = 12
+generator = None
 
 RTCMv3_PREAMBLE = 0xD3
 PRUNIT_GPS = 299792.458
@@ -181,6 +182,30 @@ def decode_1004(pkt):
     itow = tow
 
 
+def decode_1005(pkt):
+    from util import PosVector
+    global ref_pos, statid, itow, prs, corr_set, generator
+
+    statid = pkt.read(12).uint
+    itrf = pkt.read(6).uint
+    gps_flg = pkt.read(1).uint
+    glo_flg = pkt.read(1).uint
+    gal_flg = pkt.read(1).uint
+    sta_flg = pkt.read(1).uint
+    arp_ecef_x = pkt.read(38).int
+    vco_flg = pkt.read(1).uint
+    bds_flg = pkt.read(1).uint
+    arp_ecef_y = pkt.read(38).int
+    quater_cyc_flg = pkt.read(2)
+    arp_ecef_z = pkt.read(38).int
+
+    ecef = PosVector(arp_ecef_x, arp_ecef_y, arp_ecef_z)
+    llh = ecef.ToLLH()
+
+    seq = "[BaseARP],%.8f,%.8f,%f\n" % (llh.lat, llh.lon, llh.alt)
+    generator.push(seq)
+
+
 def decode_1006(pkt):
     global ref_pos
 
@@ -302,8 +327,7 @@ def decode_1019(pkt):
     eph[svid].af2 = af2 * pow(2, -55)
 
 
-def decode_msm5(pkt, type):
-    # print "decoding MSM5 msg:",type
+def decode_msm_head(pkt, type):
     staid = pkt.read(12).uint
 
     if type == 1085:  # GLONASS
@@ -324,7 +348,15 @@ def decode_msm5(pkt, type):
     tint_s = pkt.read(3).uint
 
     return tow, sync, iod, time_s, clk_str, clk_ext, smooth, tint_s
-    pass
+
+
+def decode_msm4(pkt, type):
+    return decode_msm_head(pkt, type)
+
+
+def decode_msm5(pkt, type):
+    # print "decoding MSM5 msg:",type
+    return decode_msm_head(pkt, type)
 
 
 def adjday_glot(pkt, tod):
@@ -403,13 +435,15 @@ def regen_v2_type3():
         return msg
 
 
-def parse_rtcmv3(pkt, generator):
+def parse_rtcmv3(pkt):
     pkt_type = pkt.read(12).uint
 
     # print pkt_type
     if pkt_type == 1004:
         decode_1004(pkt)
         return regen_v2_type1()
+    if pkt_type == 1005:
+        decode_1005(pkt)
     elif pkt_type == 1006:
         decode_1006(pkt)
         return regen_v2_type3()
@@ -417,14 +451,19 @@ def parse_rtcmv3(pkt, generator):
         decode_1019(pkt)
     elif pkt_type == 1033:
         decode_1033(pkt)
-    elif pkt_type == 1075 or 1085 or 1125:
-        tow, sync, iod, time_s, clk_str, clk_ext, smooth, tint_s = decode_msm5(pkt, pkt_type)
-        msm_msg_callback(pkt_type, tow, generator)
+    elif pkt_type in [1074, 1084, 1124]:
+        msg = decode_msm4(pkt, pkt_type)
+        msm4_handler(pkt_type, msg)
         # else:
         #    print "Ignore"
+    elif pkt_type in [1075, 1085, 1125]:
+        tow, sync, iod, time_s, clk_str, clk_ext, smooth, tint_s = decode_msm4(pkt, pkt_type)
+        msm5_handler(pkt_type, tow)
+    else:
+        unknown_msg_handler(pkt_type)
 
 
-def decode_rtcm3_pack(buff, generator):
+def decode_rtcm3_pack(buff):
     d = ord(buff[0])
     if d != RTCMv3_PREAMBLE:
         print "RTCM3 preamble error!", d
@@ -446,17 +485,58 @@ def decode_rtcm3_pack(buff, generator):
         for d in pkt:
             pack_stream.append(bs.pack('uint:8', ord(d)))
 
-        msg = parse_rtcmv3(pack_stream, generator)
+        msg = parse_rtcmv3(pack_stream)
 
         # if msg is not None and rtcm_callback is not None:
         #     rtcm_callback(msg)
 
 
-def msm_msg_callback(type, tow, generator):
+def decode_rtcm3_from_net(buff):
+    while len(buff) > 0:
+        if ord(buff[0]) != RTCMv3_PREAMBLE:
+            buff = buff[1:]
+            continue
+
+        pack_stream = BitStream()
+
+        l1 = ord(buff[1])
+        l2 = ord(buff[2])
+
+        pack_stream.append(bs.pack('2*uint:8', l1, l2))
+        pack_stream.read(6)
+        pkt_len = pack_stream.read(10).uint
+
+        pkt = buff[3:3 + pkt_len]
+        parity = buff[pkt_len + 3:pkt_len + 6]
+
+        buff = buff[pkt_len + 6:]
+
+        if True:  # TODO check parity
+            for d in pkt:
+                pack_stream.append(bs.pack('uint:8', ord(d)))
+
+            msg = parse_rtcmv3(pack_stream)
+
+
+def msm5_handler(type, tow, generator):
     # generate_msm_sol(type, tow)
     seq = "[MSM5],%d,%d\n" % (type, tow)
     generator.push(seq)
     pass
+
+
+def msm4_handler(type, msg):
+    global generator
+    # generate_msm_sol(type, tow)
+    seq = "[MSM4],%d,%d\n" % (type, msg[0])
+    generator.push(seq)
+    pass
+
+
+def unknown_msg_handler(pkt_type):
+    global generator
+    seq = "[unknown],%d\n" % pkt_type
+    generator.push(seq)
 
 
 def RTCM_converter_thread(server, port, username, password, mountpoint, rtcm_callback=None):
@@ -525,6 +605,11 @@ def run_RTCM_converter(server, port, user, passwd, mount, rtcm_callback=None, fo
 def _printer(p):
     print(p)
 
+
+def set_generator(gen):
+    global generator
+
+    generator = gen
 
 if __name__ == '__main__':
     RTCM_converter_thread('192.104.43.25', 2101, sys.argv[1], sys.argv[2], 'TID10', _printer)
