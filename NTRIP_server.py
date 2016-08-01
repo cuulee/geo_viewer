@@ -1,9 +1,17 @@
 import serial
 import socket
 import time
+import Queue
 
+MOUNT_PT = "RTCM32_GGB"
+# HOST = "120.76.233.44"
+HOST = "10.81.0.39"
+PORT = 50007
+# SERIAL = '/dev/ttyUSB0'
+SERIAL = 'com11'
+ 
 class NTRIPserver:
-    def __init__(self, request_handle=None, mount_point=None, host="127.0.0.1", port=50007):
+    def __init__(self, request_handle=None, mount_point=MOUNT_PT, host=HOST, port=PORT):
         self.status = "init"
         self.connected = False
         self.target_caster = request_handle
@@ -14,10 +22,20 @@ class NTRIPserver:
         self.mount_point = mount_point
         self.connection = None
         self.remote = (host, port)
+        self.q = Queue.Queue()
 
+    def cache(self, dat):
+        self.q.put(dat)
+        # self.buf += data
+        # if len(self.buf) > 20480:
+        #     self.buf = self.buf[-20480:-1]
 
-    def cache(self, data):
-        self.buf = data
+    def get_data(self):
+        # send_buff = self.buf
+        # self.flush()
+        # return send_buff
+        if not self.q.empty():
+            return self.q.get()
 
     def flush(self):
         self.buf = ''
@@ -35,6 +53,7 @@ class NTRIPserver:
         self.connection.close()
         pass
 
+
 def req_ntrip_source():
     passwd = "123456"
     mount = "RTCM32_GGB"
@@ -42,16 +61,21 @@ def req_ntrip_source():
     lon = "113.81104800"
     alt = "3.85"
     req = \
-        "SOURCE {} {}\r\n".format(passwd, mount) + \
-        "Source-Agent: pyCaster/0.1\r\n" + \
-        "STR: lat {} lon {} alt {}\r\n\r\n".format(lat,lon,alt)
+        "SOURCE {} /{}\r\n".format(passwd, mount) + \
+        "Source-Agent: NTRIP pyCaster/0.1\r\n" + \
+        "STR: lat {} lon {} alt {}\r\n\r\n".format(lat, lon, alt)
     return req
 
+
 if __name__ == '__main__':
+    f_log = open("ntrip_server.log", "wb")
     svr = NTRIPserver()
     svr.connect()
-    serial = serial.Serial('/dev/ttyUSB0', 115200)
+    serial = serial.Serial(SERIAL, 115200)
     while True:
         data = serial.read(1024)
+        #data = time.ctime()
         if len(data) > 0:
+            f_log.write(data)
             svr.connection.sendall(data)
+        #time.sleep(1)

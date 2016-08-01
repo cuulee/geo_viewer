@@ -1,11 +1,14 @@
 import socket
 import SocketServer
-from time import ctime
+import time
 import datetime
+import Queue
 from NTRIP_client import NTRIPclient
 from NTRIP_server import NTRIPserver
 
-
+HOST = "10.80.57.162"
+PORT = 50007
+# rf = open("qxwz_rtcm32_ggb.log", "rb")
 
 class RequestHandler(SocketServer.BaseRequestHandler):
     def handle(self):
@@ -14,7 +17,8 @@ class RequestHandler(SocketServer.BaseRequestHandler):
         header_info = decode_ntrip_header(header)
         print header_info
         if header_info is None:
-            self.finish()
+            return
+            # self.finish()
 
         if header_info[0] is 'server':
             ntrip_svr = NTRIPserver(self, header_info[1])
@@ -23,20 +27,29 @@ class RequestHandler(SocketServer.BaseRequestHandler):
         elif header_info[0] is 'client':
             ntrip_clt = NTRIPclient(self, header_info[1], header_info[4])
             caster.add_client(ntrip_clt)
-            self.request.sendall(get_client_resp())
+            self.request.sendall(get_client_resp().encode('ascii'))
         while True:
             if header_info[0] is 'server':
                 data = self.request.recv(1024).strip()
-                ntrip_svr.cache(data)
-                self.request.sendall('[%s] %s' % (ctime(), data))
+                if data is not None:
+                    ntrip_svr.cache(data)
+                    caster.bytes_rcved += len(data)
+                    print "received:{} sent:{}".format(caster.bytes_rcved, caster.bytes_sent)
+                # self.request.sendall('[%s] %s' % (time.ctime(), data))
                 # self.client_address
-                print data
+                # print data
             elif header_info[0] is 'client':
-                data = self.request.recv(1024).strip()
-                handle_ntrip_client_data(data)
+                # print "here in a loop for client"
+                # data = self.request.recv(1024).strip()
+                # handle_ntrip_client_data(data)
                 resp = ntrip_clt.get_data()
-                if len(resp) > 0:
+                # resp = rf.read(256)
+                # print len(resp)
+                if resp is not None:
+                    # print "{}bytes sent to client".format(len(resp))
                     self.request.sendall(resp)
+                    caster.bytes_sent += len(resp)
+                    # time.sleep(0.2)
             else:
                 pass
 
@@ -49,11 +62,12 @@ def get_client_resp():
     timephr = datetime.datetime.utcnow().strftime("%Y/%m/%d %H:%M:%S")
     ack = \
         "ICY 200 OK\r\n" + \
-        "Server: {} \r\n".format(caster.name) + \
+        "Server: POP_GW_Ntrip_1.0_1467449209/1.0\r\n".format(caster.name) + \
         "Via: n4_2\r\n" + \
         "Date: {}\r\n".format(timephr) + \
         "Connection: keep-alive\r\n\r\n"
     return ack
+
 
 def decode_ntrip_header(buff):
     if "GET" in buff:
@@ -61,6 +75,8 @@ def decode_ntrip_header(buff):
 
     elif "SOURCE" in buff:
         role = 'server'
+    else:
+        role = None
 
     if role is 'server':
         source = buff.split('\r\n')
@@ -82,7 +98,8 @@ def decode_ntrip_header(buff):
 
 
 class NTRIPcaster:
-    def __init__(self, host="0.0.0.0", server_port=50007, client_port=50008, max_server=1, max_client=1, name="C_DJI_NTRIP_1.0_2938"):
+    def __init__(self, host="0.0.0.0", server_port=50007, client_port=50008, max_server=1, max_client=1,
+                 name="C_DJI_NTRIP_1.0_2938"):
         self.running = False
         self.servers = []
         self.clients = []
@@ -92,18 +109,40 @@ class NTRIPcaster:
         self.max_client = max_client
         self.svr = None
         self.name = name
+        self.bytes_rcved = 0
+        self.bytes_sent = 0
 
     def run(self):
+        import threading
+
         svr = SocketServer.ThreadingTCPServer(self.address_svr, RequestHandler)
         print 'waiting for connection...'
-        svr.serve_forever()
         self.svr = svr
         self.running = True
+        t = threading.Thread(target=self.run_router, args=(svr,))
+        t.setDaemon(True)
+        t.start()
+        svr.serve_forever()
 
+    def run_router(self, svr):
         while True:
             if not self.running:
                 svr.shutdown()
                 break
+            for s in self.servers:
+                for c in self.clients:
+                    trans = s.get_data()
+                    if trans is None:
+                        continue
+                    if s.mount_point == c.mount_point:
+                        while trans is not None:
+                        # print "[{}][{},{}]".format(time.ctime(),s.mount_point, c.mount_point)
+                            c.push_data(trans)
+                            trans = s.get_data()
+
+
+            # print "servers:{},clients:{}".format(len(self.servers), len(self.clients))
+            # time.sleep(1)
 
     def stop(self):
         self.running = False
@@ -118,7 +157,7 @@ class NTRIPcaster:
         self.running = False
 
 
-caster = NTRIPcaster()
 
 if __name__ == '__main__':
+    caster = NTRIPcaster()
     caster.run()
