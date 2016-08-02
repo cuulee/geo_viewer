@@ -30,7 +30,7 @@ class RequestHandler(SocketServer.BaseRequestHandler):
             self.request.sendall(get_client_resp().encode('ascii'))
         while True:
             if header_info[0] is 'server':
-                data = self.request.recv(1024).strip()
+                data = self.request.recv(256).strip()
                 if data is not None:
                     ntrip_svr.cache(data)
                     caster.bytes_rcved += len(data)
@@ -107,34 +107,59 @@ class NTRIPcaster:
         self.address_clt = (host, client_port)
         self.max_server = max_server
         self.max_client = max_client
-        self.svr = None
+        self.svr_handle = None
+        self.clt_handle = None
         self.name = name
         self.bytes_rcved = 0
         self.bytes_sent = 0
 
-    def run(self):
-        import threading
+    def run_svr_handle(self):
+        handle = SocketServer.ThreadingTCPServer(self.address_svr, RequestHandler)
+        print 'waiting for Ntrip servers...'
+        self.svr_handle = handle
 
-        svr = SocketServer.ThreadingTCPServer(self.address_svr, RequestHandler)
-        print 'waiting for connection...'
-        self.svr = svr
+        handle.serve_forever()
+
+    def run_clt_handle(self):
+        handle = SocketServer.ThreadingTCPServer(self.address_clt, RequestHandler)
+        print 'waiting for Ntrip clients...'
+        self.clt_handle = handle
+
+        handle.serve_forever()
+
+    def run_all(self):
+        from threading import Thread
+
+        t2 = Thread(target=self.run_svr_handle)
+        t2.setDaemon(True)
+        t2.start()
+
         self.running = True
-        t = threading.Thread(target=self.run_router, args=(svr,))
-        t.setDaemon(True)
-        t.start()
-        svr.serve_forever()
 
-    def run_router(self, svr):
+        t1 = Thread(target=self.run_router)
+        t1.setDaemon(True)
+        t1.start()
+
+        t3 = Thread(target=self.run_clt_handle)
+        t3.setDaemon(True)
+        t3.start()
+
+
+
+    def run_router(self):
         while True:
             if not self.running:
-                svr.shutdown()
+                # svr.shutdown()
+                # print "not running"
                 break
             for s in self.servers:
                 for c in self.clients:
                     trans = s.get_data()
                     if trans is None:
+                        # print "no data to be sent"
                         continue
                     if s.mount_point == c.mount_point:
+                        # print "mount point match!"
                         while trans is not None:
                         # print "[{}][{},{}]".format(time.ctime(),s.mount_point, c.mount_point)
                             c.push_data(trans)
@@ -160,4 +185,6 @@ class NTRIPcaster:
 
 if __name__ == '__main__':
     caster = NTRIPcaster()
-    caster.run()
+    caster.run_all()
+    while True:
+        pass

@@ -4,8 +4,8 @@ import time
 import Queue
 
 MOUNT_PT = "RTCM32_GGB"
-# HOST = "120.76.233.44"
-HOST = "10.81.0.39"
+HOST = "120.76.233.44"
+# HOST = "10.81.0.39"
 PORT = 50007
 # SERIAL = '/dev/ttyUSB0'
 SERIAL = 'com11'
