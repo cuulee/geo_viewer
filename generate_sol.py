@@ -1,7 +1,8 @@
 import struct
 import time
 from dji import chkCRC8, chkCRC16, getHeader
-from RTCMv3_decode import decode_rtcm3_pack,generator
+from RTCMv3_decode import decode_rtcm3_pack
+import RTCMv3_decode
 
 buff_len = 1024
 # state = 0
@@ -10,7 +11,7 @@ buff_len = 1024
 f = open('pvt.sol', 'w')
 f1 = open('baserange.sol', 'w')
 unicore_msgType_list = [0x8f1, 0x8f7]
-RTCM_msgType_list = [1075, 1085, 1125]
+RTCM_msgType_list = [1075, 1085, 1125, 1033, 1019, 1020, 1041, 1006, 1005, 1004]
 write_done = False
 
 
@@ -53,10 +54,12 @@ def unpack_unicore(bytes):
         trkSVs, solSVs = struct.unpack("<BB", bytes[92:94])
         seq = "[BestPos],%d,%d,%.8f,%.8f,%f,%d,%d,%d,%d\n" % (
             solStt, posType, lat, lon, hgt, undulation, trkSVs, solSVs, ms)
-        generator.push(seq)
+        if RTCMv3_decode.generator is not None:
+            RTCMv3_decode.generator.push(seq)
     if msgID == 283:
         seq = "[BaseRange],%d,%d\n" % (week, ms)
-        generator.push(seq)
+        if RTCMv3_decode.generator is not None:
+            RTCMv3_decode.generator.push(seq)
     return 0
 
 
@@ -68,7 +71,7 @@ def unpack_rtcm(bytes):
     cvt.input(bytes)
 
 
-class RTCMPack:
+class RTCMPack: # self packed rtcm frame with 2 bytes of header
     def __init__(self):
         self.pack_idx = 0
         self.num_of_pack = 0

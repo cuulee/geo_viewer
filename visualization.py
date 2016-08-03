@@ -21,15 +21,15 @@ def plot_bestpos(f):
     lon0 = 0.0
     inited1 = 0
     inited2 = 0
-    lat = []
-    lon = []
+    lat_fix = []
+    lon_fix = []
     x = []
     y = []
     x_float = []
     y_float = []
     x_single = []
     y_single = []
-    ms = []
+    ms_diff = []
     rtkTrkSVs = []
     rtkSolSVs = []
     ttff = 0
@@ -41,43 +41,48 @@ def plot_bestpos(f):
         if line.split(",")[0] != "[BestPos]":
             continue
 
-        posType = line.split(",")[2]
+        type, _solStt, _posType, _lat, _lon, _hgt, _undulation, _trkSVs, _solSVs, _ms = line.split(",")
+        solStt, posType, undulation, trkSVs, solSVs, ms = map(int, (_solStt, _posType, _undulation, _trkSVs, _solSVs, _ms))
+        lat, lon, hgt = map(float, (_lat, _lon, _hgt))
+
         if inited1 == 0:
-            time_start = int(line.split(",")[9])
+            time_start = ms
             last_ms = time_start
             inited1 = 1
         else:
             total_cnt += 1.0
         postype.append(posType)
-        rtkTrkSVs.append(line.split(",")[7])
-        rtkSolSVs.append(line.split(",")[8])
-        ms.append(int(line.split(",")[9]) - last_ms)
-        last_ms = int(line.split(",")[9])
-        if posType != "50":
+        rtkTrkSVs.append(trkSVs)
+        rtkSolSVs.append(solSVs)
+        ms_diff.append(ms - last_ms)
+        last_ms = ms
+        if posType < 48:
             if inited2 == 0:
-                continue
+                # continue
+                pass
             if posType >= 32:
-                x_float.append(111195 * (float(line.split(",")[3]) - lat0))
-                y_float.append(111195 * math.cos(float(line.split(",")[3])) * (float(line.split(",")[4]) - lon0))
+                x_float.append(111195 * (lat - lat0))
+                y_float.append(111195 * math.cos(lat) * (lon - lon0))
             if posType == 16:
-                x_single.append(111195 * (float(line.split(",")[3]) - lat0))
-                y_single.append(111195 * math.cos(float(line.split(",")[3])) * (float(line.split(",")[4]) - lon0))
+                x_single.append(111195 * (lat - lat0))
+                y_single.append(111195 * math.cos(lat) * (lon - lon0))
             continue
         narrowInt_cnt += 1.0
         if inited2 == 0:
-            lat0 = float(line.split(",")[3])
-            lon0 = float(line.split(",")[4])
-            ttff = (int(line.split(",")[9]) - time_start) / 1000
+            lat0 = lat
+            lon0 = lon
+            ttff = (ms - time_start) / 1000
             inited2 = 1
-        lat.append(float(line.split(",")[3]))
-        lon.append(float(line.split(",")[4]))
-        x.append(111195 * (lat[-1] - lat0))
-        y.append(111195 * math.cos(lat[-1]) * (lon[-1] - lon0))
+        lat_fix.append(lat)
+        lon_fix.append(lon)
+        x.append(111195 * (lat_fix[-1] - lat0))
+        y.append(111195 * math.cos(lat_fix[-1]) * (lon_fix[-1] - lon0))
 
-    minor_ticks_x = np.arange(int(min(x)) - 1, int(max(x)) + 1, 1)
-    minor_ticks_y = np.arange(int(min(y)) - 1, int(max(y)) + 1, 1)
-    a1.set_xticks(minor_ticks_x, minor=True)
-    a1.set_yticks(minor_ticks_y, minor=True)
+    if len(x) > 0:
+        minor_ticks_x = np.arange(int(min(x)) - 1, int(max(x)) + 1, 1)
+        minor_ticks_y = np.arange(int(min(y)) - 1, int(max(y)) + 1, 1)
+        a1.set_xticks(minor_ticks_x, minor=True)
+        a1.set_yticks(minor_ticks_y, minor=True)
     plt.subplot(2, 2, 1, aspect=1)
     plt.title('position cloud')
     plt.grid(True, 'minor', 'both')
@@ -96,7 +101,7 @@ def plot_bestpos(f):
     plt.subplot(2, 2, 3)
     plt.title('packet time diff')
     a3.set_ylim(-800, 1000)
-    a3.plot(ms)
+    a3.plot(ms_diff)
 
     plt.subplot(2, 2, 4)
     plt.title('trk/sol SVs')

@@ -12,9 +12,11 @@ rtklib.
 import sys, time
 import bitstring as bs
 # import satPosition, util, RTCMv2, positionEstimate
+import util
 import RTCMv2
 
 from bitstring import BitStream
+import logging
 
 max_sats = 12
 generator = None
@@ -203,7 +205,8 @@ def decode_1005(pkt):
     llh = ecef.ToLLH()
 
     seq = "[BaseARP],%.8f,%.8f,%f\n" % (llh.lat, llh.lon, llh.alt)
-    generator.push(seq)
+    if generator is not None:
+        generator.push(seq)
 
 
 def decode_1006(pkt):
@@ -326,6 +329,9 @@ def decode_1019(pkt):
     eph[svid].af1 = af1 * pow(2, -43)
     eph[svid].af2 = af2 * pow(2, -55)
 
+def decode_1020(pkt):
+    pass
+
 
 def decode_msm_head(pkt, type):
     staid = pkt.read(12).uint
@@ -367,88 +373,92 @@ def adjweek(pke, tow):
     pass
 
 
-def regen_v2_type1():
-    if ref_pos is None:
-        return
+# def regen_v2_type1():
+#     if ref_pos is None:
+#         return
+#
+#     errset = {}
+#     pranges = {}
+#     for svid in prs:
+#
+#         if svid not in eph:
+#             # print("Don't have ephemeris for {}, only {}".format(svid, eph.keys()))
+#             continue
+#
+#         toc = eph[svid].toc
+#         tof = prs[svid] / util.speedOfLight
+#
+#         # assume the time_of_week is the exact receiver time of week that the message arrived.
+#         # subtract the time of flight to get the satellite transmit time
+#         transmitTime = itow - tof
+#
+#         T = util.correctWeeklyTime(transmitTime - toc)
+#
+#         satpos = satPosition.satPosition_raw(eph[svid], svid, transmitTime)
+#         Trel = satpos.extra
+#
+#         satPosition.correctPosition_raw(satpos, tof)
+#
+#         geo = satpos.distance(util.PosVector(*ref_pos))
+#
+#         dTclck = eph[svid].af0 + eph[svid].af1 * T + eph[svid].af2 * T * T + Trel - eph[svid].Tgd
+#
+#         # Incoming PR is already corrected for receiver clock bias
+#         prAdjusted = prs[svid] + dTclck * util.speedOfLight
+#
+#         errset[svid] = geo - prAdjusted
+#         pranges[svid] = prAdjusted
+#
+#     save_satlog(itow, errset)
+#
+#     if correct_rxclk:
+#         rxerr = positionEstimate.clockLeastSquares_ranges(eph, pranges, itow, ref_pos, 0)
+#         if rxerr is None:
+#             return
+#
+#         rxerr *= util.speedOfLight
+#
+#         for svid in errset:
+#             errset[svid] += rxerr
+#             pranges[svid] += rxerr
+#
+#         rxerr = positionEstimate.clockLeastSquares_ranges(eph, pranges, itow, ref_pos, 0) * util.speedOfLight
+#
+#         print("Residual RX clock error {}".format(rxerr))
+#
+#     iode = {}
+#     for svid in eph:
+#         iode[svid] = eph[svid].iode
+#
+#     msg = rtcm.RTCMType1_ext(errset, itow, week, iode)
+#     if len(msg) > 0:
+#         return msg
 
-    errset = {}
-    pranges = {}
-    for svid in prs:
 
-        if svid not in eph:
-            # print("Don't have ephemeris for {}, only {}".format(svid, eph.keys()))
-            continue
-
-        toc = eph[svid].toc
-        tof = prs[svid] / util.speedOfLight
-
-        # assume the time_of_week is the exact receiver time of week that the message arrived.
-        # subtract the time of flight to get the satellite transmit time
-        transmitTime = itow - tof
-
-        T = util.correctWeeklyTime(transmitTime - toc)
-
-        satpos = satPosition.satPosition_raw(eph[svid], svid, transmitTime)
-        Trel = satpos.extra
-
-        satPosition.correctPosition_raw(satpos, tof)
-
-        geo = satpos.distance(util.PosVector(*ref_pos))
-
-        dTclck = eph[svid].af0 + eph[svid].af1 * T + eph[svid].af2 * T * T + Trel - eph[svid].Tgd
-
-        # Incoming PR is already corrected for receiver clock bias
-        prAdjusted = prs[svid] + dTclck * util.speedOfLight
-
-        errset[svid] = geo - prAdjusted
-        pranges[svid] = prAdjusted
-
-    save_satlog(itow, errset)
-
-    if correct_rxclk:
-        rxerr = positionEstimate.clockLeastSquares_ranges(eph, pranges, itow, ref_pos, 0)
-        if rxerr is None:
-            return
-
-        rxerr *= util.speedOfLight
-
-        for svid in errset:
-            errset[svid] += rxerr
-            pranges[svid] += rxerr
-
-        rxerr = positionEstimate.clockLeastSquares_ranges(eph, pranges, itow, ref_pos, 0) * util.speedOfLight
-
-        print("Residual RX clock error {}".format(rxerr))
-
-    iode = {}
-    for svid in eph:
-        iode[svid] = eph[svid].iode
-
-    msg = rtcm.RTCMType1_ext(errset, itow, week, iode)
-    if len(msg) > 0:
-        return msg
-
-
-def regen_v2_type3():
-    msg = rtcm.RTCMType3_ext(itow, week, util.PosVector(*ref_pos))
-    if len(msg) > 0:
-        return msg
+# def regen_v2_type3():
+#     msg = rtcm.RTCMType3_ext(itow, week, util.PosVector(*ref_pos))
+#     if len(msg) > 0:
+#         return msg
 
 
 def parse_rtcmv3(pkt):
+    logger = logging.getLogger()
     pkt_type = pkt.read(12).uint
+    logger.info("[RTCM{}]".format(pkt_type))
 
     # print pkt_type
     if pkt_type == 1004:
         decode_1004(pkt)
-        return regen_v2_type1()
+        return # regen_v2_type1()
     if pkt_type == 1005:
         decode_1005(pkt)
     elif pkt_type == 1006:
         decode_1006(pkt)
-        return regen_v2_type3()
+        return # regen_v2_type3()
     elif pkt_type == 1019:
         decode_1019(pkt)
+    elif pkt_type == 1020:
+        decode_1020(pkt)
     elif pkt_type == 1033:
         decode_1033(pkt)
     elif pkt_type in [1074, 1084, 1124]:
@@ -518,10 +528,12 @@ def decode_rtcm3_from_net(buff):
             msg = parse_rtcmv3(pack_stream)
 
 
-def msm5_handler(type, tow, generator):
+def msm5_handler(type, tow):
     # generate_msm_sol(type, tow)
+    global generator
     seq = "[MSM5],%d,%d\n" % (type, tow)
-    generator.push(seq)
+    if generator is not None:
+        generator.push(seq)
     pass
 
 
@@ -529,14 +541,16 @@ def msm4_handler(type, msg):
     global generator
     # generate_msm_sol(type, tow)
     seq = "[MSM4],%d,%d\n" % (type, msg[0])
-    generator.push(seq)
+    if generator is not None:
+        generator.push(seq)
     pass
 
 
 def unknown_msg_handler(pkt_type):
     global generator
     seq = "[unknown],%d\n" % pkt_type
-    generator.push(seq)
+    if generator is not None:
+        generator.push(seq)
 
 
 def RTCM_converter_thread(server, port, username, password, mountpoint, rtcm_callback=None):
@@ -610,6 +624,8 @@ def set_generator(gen):
     global generator
 
     generator = gen
+
+
 
 if __name__ == '__main__':
     RTCM_converter_thread('192.104.43.25', 2101, sys.argv[1], sys.argv[2], 'TID10', _printer)
