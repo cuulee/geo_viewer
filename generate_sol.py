@@ -128,21 +128,14 @@ def parse_v1_pack(buff, handler):
         pack_1 = buff[headBegin:headBegin + length]
         if length + headBegin > len(buff):
             return pack_1
-        # if mode == 0:
-        #     unpack_record(pack_1)
-        # else:
-        #     unpack_v1_comm(pack_1)
+
         handler(pack_1)
 
         search_idx = headBegin + length
         crc16_chk = chkCRC16(pack_1)
         if crc16_chk != 0:
             print "crc16 error"
-            # crc16_err = crc16_err +1
-            # print "crc16:%.4x"%crc16_chk
-            # for h in pack_1:
-            # print "%.2x"%ord(h),
-            # print ""
+
     return pack_1
 
 

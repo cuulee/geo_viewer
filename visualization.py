@@ -40,7 +40,8 @@ def plot_bestpos(f):
     for line in f:
         if line.split(",")[0] != "[BestPos]":
             continue
-
+        if len(line.split(',')) < 9:
+            continue
         type, _solStt, _posType, _lat, _lon, _hgt, _undulation, _trkSVs, _solSVs, _ms = line.split(",")
         solStt, posType, undulation, trkSVs, solSVs, ms = map(int, (_solStt, _posType, _undulation, _trkSVs, _solSVs, _ms))
         lat, lon, hgt = map(float, (_lat, _lon, _hgt))

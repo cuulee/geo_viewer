@@ -233,7 +233,7 @@ class DJI_dev:
         return self.dev.write(buf)
 
     def read(self, n):
-        return self.dev.read(n)
+        return self.dev.read()
 
     def send(self, msg):
         if not msg.valid():
@@ -244,6 +244,8 @@ class DJI_dev:
 
     def special_handling(self, msg):
         if msg.cmdSet() == 0x00 and msg.cmdID() == 0x0e:
+            # if msg._buf[11] != 160:
+            #     return
             print msg._buf[12:-2]
 
             # if msg.cmdSet() == 0x00 and msg.cmdID() == 0x0c:

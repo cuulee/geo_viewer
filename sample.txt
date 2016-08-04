@@ -1,3 +1,40 @@
 22.689102 113.928938
 22.384990 113.200192
 22.640298 113.938290
+
+Header sending... 
+
+Waiting answer...
+
+ICY 200 OK
+
+
+Server: C_DJI_NTRIP_1.0_2938 
+
+Via: n4_2
+
+Date: 2016/08/01 05:22:05
+
+Connection: keep-alive
+
+
+
+
+Header sending... 
+
+Waiting answer...
+
+ICY 200 OK
+
+
+Server: POP_GW_Ntrip_1.0_1467449209/1.0 
+
+Via: n4_2
+
+Date: 2016/08/01 13:27:21
+
+Connection: keep-alive
+
+
+
+

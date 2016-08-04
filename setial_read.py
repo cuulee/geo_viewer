@@ -1,20 +1,29 @@
-import struct
-import serial
 import time
-from generate_sol import chkCRC8,chkCRC16,getHeader,unpack_v1_comm,parse_v1_pack,unpack_v1_comm
+import dji
+# import drtk
+from threading import Thread
 
-t = serial.Serial('com5',115200)
-remain = ""
-#str = t.read(1024)
+# PORT = '/dev/ttyACM2'
+PORT = 'com3'
+BAUD = 115200
 
-while True:
-    buff = t.read(t.in_waiting)
-    #print len(buff)
-    if len(buff) == 0:
-        #print "buff empty"
-        time.sleep(0.1)
-        continue
-    remain = parse_v1_pack(remain+buff, unpack_v1_comm)
+def recv_loop(dev):
+    while True:
+        msg = dev.receive_msg()
+        # time.sleep(1)
 
+if __name__ == '__main__':
+    dev = dji.DJI_dev(0x1a, 0x07, PORT, BAUD, 2)
+    # rtk_adpt = drtk.RTKadapter(dev)
+
+    t = Thread(target=recv_loop, args=(dev,))
+    t.setDaemon(True)
+    t.start()
+    try:
+        while True:
+            pass
+    except KeyboardInterrupt:
+        dev.close()
+        print "\ndev closed"
 
 
