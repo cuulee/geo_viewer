@@ -255,3 +255,11 @@ def loadObject(filename):
         return obj
     except Exception as e:
         return None
+
+if __name__ == '__main__':
+    llh = PosLLH(22.540219,113.947425,115.347)
+    ecef = llh.ToECEF()
+    print ecef
+    ecef1 = PosVector(40557340.0,5386562.5,2429815.25)
+    print ecef1.ToLLH()
+    

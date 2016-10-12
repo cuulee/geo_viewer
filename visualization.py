@@ -19,8 +19,9 @@ def plot_bestpos(f):
 
     lat0 = 0.0
     lon0 = 0.0
-    inited1 = 0
-    inited2 = 0
+    init0 = False
+    init1 = False
+    init2 = False
     lat_fix = []
     lon_fix = []
     x = []
@@ -46,10 +47,18 @@ def plot_bestpos(f):
         solStt, posType, undulation, trkSVs, solSVs, ms = map(int, (_solStt, _posType, _undulation, _trkSVs, _solSVs, _ms))
         lat, lon, hgt = map(float, (_lat, _lon, _hgt))
 
-        if inited1 == 0:
+        if not init0:
+            if posType >= 16:
+                lat0 = lat
+                lon0 = lon
+                init0 = True
+            else:
+                pass
+
+        if not init1:
             time_start = ms
             last_ms = time_start
-            inited1 = 1
+            init1 = True
         else:
             total_cnt += 1.0
         postype.append(posType)
@@ -58,7 +67,7 @@ def plot_bestpos(f):
         ms_diff.append(ms - last_ms)
         last_ms = ms
         if posType < 48:
-            if inited2 == 0:
+            if init2 == 0:
                 # continue
                 pass
             if posType >= 32:
@@ -68,23 +77,23 @@ def plot_bestpos(f):
                 x_single.append(111195 * (lat - lat0))
                 y_single.append(111195 * math.cos(lat) * (lon - lon0))
             continue
+
         narrowInt_cnt += 1.0
-        if inited2 == 0:
-            lat0 = lat
-            lon0 = lon
+        if not init2:
             ttff = (ms - time_start) / 1000
-            inited2 = 1
+            init2 = True
         lat_fix.append(lat)
         lon_fix.append(lon)
         x.append(111195 * (lat_fix[-1] - lat0))
         y.append(111195 * math.cos(lat_fix[-1]) * (lon_fix[-1] - lon0))
 
+    plt.subplot(2, 2, 1)
     if len(x) > 0:
         minor_ticks_x = np.arange(int(min(x)) - 1, int(max(x)) + 1, 1)
         minor_ticks_y = np.arange(int(min(y)) - 1, int(max(y)) + 1, 1)
         a1.set_xticks(minor_ticks_x, minor=True)
         a1.set_yticks(minor_ticks_y, minor=True)
-    plt.subplot(2, 2, 1, aspect=1)
+
     plt.title('position cloud')
     plt.grid(True, 'minor', 'both')
     plt.plot(x, y, 'o', color='green')
@@ -106,13 +115,14 @@ def plot_bestpos(f):
 
     plt.subplot(2, 2, 4)
     plt.title('trk/sol SVs')
+    a4.set_ylim(0, 30)
     a4.plot(rtkTrkSVs, color="blue")
     a4.plot(rtkSolSVs, color="green")
 
     pic = "." + f.name.split(".")[1] + ".png"
 
     plt.savefig(pic, format='png')
-    # plt.show()
+    plt.show()
     plt.close()
 
 

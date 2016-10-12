@@ -1,17 +1,20 @@
 import struct
 import time
-from dji import chkCRC8, chkCRC16, getHeader
-from RTCMv3_decode import decode_rtcm3_pack
-import RTCMv3_decode
+from dji.dji import chkCRC8, chkCRC16, getHeader
+# from RTCMv3_decode import decode_rtcm3_pack
+from rtcm.RTCMv3_decode import *
+import logging
 
 buff_len = 1024
 # state = 0
 # len_ver = [0,0];
 
-f = open('pvt.sol', 'w')
-f1 = open('baserange.sol', 'w')
-unicore_msgType_list = [0x8f1, 0x8f7]
+# f = open('pvt.sol', 'w')
+# f1 = open('baserange.sol', 'w')
+unicore_msgType_list = [0x8f1, 0x8f7, 0x8fe]
+CNR_MSG_LIST = [0x900, 0x901, 0x902, 0x903, 0x904, 0x905, 0x906, 0x907, 0x908]
 RTCM_msgType_list = [1075, 1085, 1125, 1033, 1019, 1020, 1041, 1006, 1005, 1004]
+station_info_msg_list = [0x8ee,0x8ef]
 write_done = False
 
 
@@ -42,9 +45,20 @@ def unpack_record(bytes):
         unpack_rtcm(buff)
         # uniSync,msgID,msgType,portAddr,msgLen,seq = struct.unpack("<IhBBhh",bytes[10:22])
         # print "%.8x msgID:%.4x msgType:%.2x"%(uniSync,msgID,msgType)
+    if data_type in station_info_msg_list:  # rover info
+        for val in bytes[10:10 + length]:
+            buff += chr(ord(val) ^ key)
+        unpack_station_info(buff,data_type)
+        # print "find g rtk status pack!"
+
+    if data_type in CNR_MSG_LIST:
+        pass
+        # for val in bytes[10:10 + length]:
+        #     buff += chr(ord(val) ^ key)
 
 
 def unpack_unicore(bytes):
+    logger = logging.getLogger('middle_solution')
     # uniSync,msgID,msgType,portAddr,msgLen,seq = struct.unpack("<IhBBhh",bytes[0:12])
     uniSync, msgID, msgType, portAddr, msgLen, seq, idleTime, timeStt, week, ms, rsv2, timeOffset, rsv3 = struct.unpack(
         "<IhBBhhBBhIIhh", bytes[0:28])
@@ -52,26 +66,34 @@ def unpack_unicore(bytes):
     if msgID == 42:
         solStt, posType, lat, lon, hgt, undulation = struct.unpack("<IIdddf", bytes[28:64])
         trkSVs, solSVs = struct.unpack("<BB", bytes[92:94])
-        seq = "[BestPos],%d,%d,%.8f,%.8f,%f,%d,%d,%d,%d\n" % (
+        seq = "[BestPos],%d,%d,%.8f,%.8f,%f,%d,%d,%d,%d" % (
             solStt, posType, lat, lon, hgt, undulation, trkSVs, solSVs, ms)
-        if RTCMv3_decode.generator is not None:
-            RTCMv3_decode.generator.push(seq)
+        logger.info(seq)
     if msgID == 283:
-        seq = "[BaseRange],%d,%d\n" % (week, ms)
-        if RTCMv3_decode.generator is not None:
-            RTCMv3_decode.generator.push(seq)
+        seq = "[BaseRange],%d,%d" % (week, ms)
+        logger.info(seq)
     return 0
 
 
 def unpack_rtcm(bytes):
-    # print "rtcm msm packet", ord(bytes[1]) + 1, "of", ord(bytes[0])
+    # print "rtcm msm packet", ord(bytes[1]) + 1, "of", ord(bytes[0])g
     # total_num = ord(bytes[0])
     # pack_num = ord(bytes[1])
 
     cvt.input(bytes)
 
 
-class RTCMPack: # self packed rtcm frame with 2 bytes of header
+def unpack_station_info(bytes,datatype):
+    logger = logging.getLogger('middle_solution')
+    boot_cnt, hardware_ver, software_ver = struct.unpack("<III", bytes[:12])
+    if datatype == 0x8ef:
+        seq = "[BaseInfo],boot_cnt:%d,hardware:%d,software:%d" % (boot_cnt, hardware_ver, software_ver)
+    if datatype == 0x8ee:
+        seq = "[RoverInfo],boot_cnt:%d,hardware:%d,software:%d" % (boot_cnt, hardware_ver, software_ver)
+    logger.info(seq)
+
+
+class RTCMPack:  # self packed rtcm frame with 2 bytes of header
     def __init__(self):
         self.pack_idx = 0
         self.num_of_pack = 0
@@ -102,7 +124,7 @@ def generate_msm_sol(type, tow):
     pass
 
 
-def parse_v1_pack(buff, handler):
+def resolve_v1(buff, handler):
     search_idx = 0
     pack_1 = ""
 
@@ -134,51 +156,10 @@ def parse_v1_pack(buff, handler):
         search_idx = headBegin + length
         crc16_chk = chkCRC16(pack_1)
         if crc16_chk != 0:
-            print "crc16 error"
+            # print "crc16 error"
+            pass
 
     return pack_1
-
-
-def sol_generating_thread(generator):
-    while True:
-        msg_list = []
-        try:
-            msg_list = generator.pop(100)
-        except:
-            pass
-        for msg in msg_list:
-            generator.log_file.writelines(msg)
-
-        time.sleep(0.1)
-
-
-class SolGenerator:
-    def __init__(self, log_file):
-        self.log_file = log_file
-        self._buff = []
-        self.running = False
-        self.thread = None
-
-    def push(self, buff):
-        # self._buff.append(buff)
-        self.log_file.writelines(buff)
-
-    def pop(self, n):
-        return self._buff.pop(n)
-
-    def run(self):
-        import threading
-
-        if self.running:
-            return
-
-        t = threading.Thread(target=sol_generating_thread, args=(self,))
-        t.start()
-        self.thread = t
-        self.running = True
-
-    def terminate(self):
-        self.running = False
 
 
 cvt = RTCMPack()

@@ -1,29 +1,69 @@
 import struct
-from generate_sol import parse_v1_pack, unpack_record, SolGenerator
-from RTCMv3_decode import set_generator
+from generate_sol import resolve_v1, unpack_record
+from rtcm.RTCMv3_decode import resolve_rtcm3
 import tkFileDialog
 import os
+import time
 
-def parse_logfile(f_in):
-    cnt = 10000
+bytes_processed = 0
+
+def calc_process(fsize):
+    global bytes_processed
+    while bytes_processed < fsize:
+        pct = bytes_processed * 100.0 / fsize
+        print "processed: %{}\r".format(pct),
+        time.sleep(1)
+
+def start_calc(fsize):
+    import threading
+    
+    t = threading.Thread(target = calc_process,args=(fsize,))
+    t.setDaemon(True)
+    t.start()
+
+def parse_v1log(f_in,fsize):
+    cnt = 1000000
     buff_len = 1024
     remain = ""
+    global bytes_processed
+
+    bytes_processed = 0
+
+    start_calc(fsize)
     while cnt>0:
         cnt = cnt-1
         buff = f_in.read(buff_len)
         if buff is None:
             break
-        remain = parse_v1_pack(remain+buff, unpack_record)
+        remain = resolve_v1(remain+buff, unpack_record)
+        bytes_processed += len(buff)
+    print "done!"
+
+def parse_rtcm3log(f_in,fsize):
+    cnt = 1000000
+    buff_len = 1024
+    remain = ""
+    global bytes_processed
+
+    start_calc(fsize)
+    while cnt>0:
+        cnt = cnt-1
+        buff = f_in.read(buff_len)
+        if buff is None:
+            break
+        remain = resolve_rtcm3(remain+buff)
+        bytes_processed += len(buff)
     print "done!"
 
 
 if __name__ == '__main__':
+    from logger import init_logger
     fn = tkFileDialog.askopenfilename(initialdir=os.getcwd())
     f = open(fn, "rb")
     fo = open("pvt.sol")
-    sg = SolGenerator(fo)
-    set_generator(sg)
-    parse_logfile(f)
+    f_size = os.path.getsize(fn)
+    init_logger(fo)
+    parse_v1log(f,f_size)
     # f_out = open("pvt.sol", "w")
 
 

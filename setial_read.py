@@ -3,8 +3,8 @@ import dji
 # import drtk
 from threading import Thread
 
-# PORT = '/dev/ttyACM2'
-PORT = 'com3'
+PORT = '/dev/ttyACM0'
+# PORT = 'com3'
 BAUD = 115200
 
 def recv_loop(dev):
@@ -13,7 +13,7 @@ def recv_loop(dev):
         # time.sleep(1)
 
 if __name__ == '__main__':
-    dev = dji.DJI_dev(0x1a, 0x07, PORT, BAUD, 2)
+    dev = dji.DJI_dev(0x03, 0x06, PORT, BAUD, 2)
     # rtk_adpt = drtk.RTKadapter(dev)
 
     t = Thread(target=recv_loop, args=(dev,))
@@ -21,7 +21,7 @@ if __name__ == '__main__':
     t.start()
     try:
         while True:
-            pass
+            time.sleep(1)
     except KeyboardInterrupt:
         dev.close()
         print "\ndev closed"

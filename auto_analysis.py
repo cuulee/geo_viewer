@@ -1,32 +1,35 @@
-from unpack_logfile import parse_logfile
-from visualization import plot_bestpos, plot_MSM
-from generate_sol import SolGenerator
-from RTCMv3_decode import set_generator
-import tkFileDialog
 import os
 import  time
+import tkFileDialog
+from unpack_logfile import parse_v1log, parse_rtcm3log
+from visualization import plot_bestpos, plot_MSM
+from logger import init_logger
 
+class TraversalResolver(object):
+    def __init__(self,parser,itype='DAT',otype='sol'):
+        self.itype = itype
+        self.otype = otype
+        self.parser = parser
 
-def traversal_resolve(rootDir):
-    list_dirs = os.walk(rootDir)
-
-    for root, dirs, files in list_dirs:
-        for f in files:
-            name, ext = f.split(".")
-            sol_name = name + ".sol"
-            if ext != "DAT":
-                continue
-            if sol_name in files:
-                continue
-            print "resolving file:", os.path.join(root, f)
-            f_in = open(os.path.join(root, f), "rb")
-            f_out = open(os.path.join(root, sol_name), "w")
-            print "output file:", os.path.join(root, sol_name)
-            sg = SolGenerator(f_out)
-            # sg.run()
-            set_generator(sg)
-            parse_logfile(f_in)
-            print "done"
+    def resolve(self,rootDir):
+        list_dirs = os.walk(rootDir)
+        for root, dirs, files in list_dirs:
+            for f in files:
+                name, ext = f.split(".")
+                sol_name = name + '.' + self.otype
+                if ext != self.itype:
+                    continue
+                if sol_name in files:
+                    continue
+                file_path = os.path.join(root, f)
+                file_size = os.path.getsize(file_path)
+                print "resolving file:", file_path,file_size,"bytes"
+                f_in = open(file_path, "rb")
+                f_out = open(os.path.join(root, sol_name), "w")
+                print "output file:", os.path.join(root, sol_name)
+                init_logger(f_out)
+                self.parser(f_in,file_size)
+                print "done"
 
 def traversal_plot(rootDir):
     list_dirs = os.walk(rootDir)
@@ -59,9 +62,14 @@ def traversal_plot_msm(rootDir):
             print "done"
 
 if __name__ == '__main__':
-    traversal_resolve("./logs")
+    tr = TraversalResolver(parse_v1log)
+    tr.resolve("./logs")
+    tr1 = TraversalResolver(parse_rtcm3log,'log')
+    tr1.resolve("./logs")
+    # traversal_resolve("./logs")
+    # traversal_resolve_rtcm3("./logs")
     # time.sleep(3)
-    traversal_plot("./logs")
-    traversal_plot_msm("./logs")
+    # traversal_plot("./logs")
+    # traversal_plot_msm("./logs")
     # raw_input()
 

@@ -1,8 +1,8 @@
-import dji
-from drtk import RTKadapter
+import dji.dji as dji
+from dji.drtk import RTKadapter
 import time
 import shutil
-from unpack_logfile import parse_logfile
+from unpack_logfile import parse_v1log
 import os
 
 port = None
