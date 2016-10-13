@@ -21,39 +21,43 @@ def start_calc(fsize):
     t.setDaemon(True)
     t.start()
 
-def parse_v1log(f_in,fsize):
-    cnt = 1000000
-    buff_len = 1024
+def parse_v1log(fn_in,fsize):
+    cnt = 100000
+    buff_len = 1024*64
     remain = ""
     global bytes_processed
 
     bytes_processed = 0
+    f = open(fn_in,'rb')
 
     start_calc(fsize)
     while cnt>0:
         cnt = cnt-1
-        buff = f_in.read(buff_len)
+        buff = f.read(buff_len)
         if buff is None:
             break
         remain = resolve_v1(remain+buff, unpack_record)
         bytes_processed += len(buff)
     print "done!"
+    f.close()
 
-def parse_rtcm3log(f_in,fsize):
-    cnt = 1000000
-    buff_len = 1024
+def parse_rtcm3log(fn_in,fsize):
+    cnt = 100000
+    buff_len = 1024*64
     remain = ""
     global bytes_processed
 
+    f = open(fn_in,'rb')
     start_calc(fsize)
     while cnt>0:
         cnt = cnt-1
-        buff = f_in.read(buff_len)
+        buff = f.read(buff_len)
         if buff is None:
             break
         remain = resolve_rtcm3(remain+buff)
         bytes_processed += len(buff)
     print "done!"
+    f.close()
 
 
 if __name__ == '__main__':
