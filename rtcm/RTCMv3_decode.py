@@ -14,11 +14,21 @@ import bitstring as bs
 # import satPosition, util, RTCMv2, positionEstimate
 import util
 import RTCMv2
+from rtklib import Bits
 
-from bitstring import BitStream
+# from bitstring import BitStream
+from bitstream import BitStream
 import logging
+from logger import get_logger,get_progress_bar
 
-logger = logging.getLogger('middle_solution')
+try:
+    range = xrange
+except NameError:
+    pass
+
+# logger = logging.getLogger('middle_solution')
+logger = get_logger()
+bar = get_progress_bar()
 
 max_sats = 12
 
@@ -427,7 +437,7 @@ def decode_msm5(pkt, type):
     # decode satellite data
     for i in range(header.nsat):
         rng = pkt.read(8).int
-        if rng!=255:
+        if True:#rng!=255:
             r.append(float(rng) * RANGE_MS)
 
     for i in range(header.nsat):
@@ -440,17 +450,17 @@ def decode_msm5(pkt, type):
 
     for i in range(header.nsat):
         rate = pkt.read(14).int
-        if rate!=-8192:
+        if True:#rate!=-8192:
             rr.append(float(rate)*1.0)
 
     for i in range(header.nsat):
         prv = pkt.read(15).int
-        if prv!=-16284:
+        if True:#prv!=-16284:
             pr.append(float(prv)*P2_24*RANGE_MS)
     
     for i in range(header.nsat):
         cpv = pkt.read(22).int
-        if cpv!=-2097152:
+        if True:#cpv!=-2097152:
             cp.append(float(cpv)*P2_29*RANGE_MS)
 
     for i in range(header.nsat):
@@ -464,7 +474,7 @@ def decode_msm5(pkt, type):
     
     for i in range(header.nsat):
         rrv = pkt.read(15).int
-        if rrv!=-16384:
+        if True:#rrv!=-16384:
             rrf.append(float(rrv)*0.0001)
 
     seq = "[MSM_head],%d,%d,%d,%d,%d,%d,%d,%d,%d,%d" % \
@@ -616,32 +626,35 @@ def decode_rtcm3_pack(buff):
 
 
 def resolve_rtcm3(buff):
-    while len(buff) > 0:
-        if ord(buff[0]) != RTCMv3_PREAMBLE:
-            buff = buff[1:]
+    sync_head = 0
+    while sync_head < len(buff):
+        if ord(buff[sync_head]) != RTCMv3_PREAMBLE:
+            sync_head += 1
+            bar.mark(1)
             continue
 
-        pack_stream = BitStream()
+        pack_stream = Bits()
 
-        l1 = ord(buff[1])
-        l2 = ord(buff[2])
-
-        pack_stream.append(bs.pack('2*uint:8', l1, l2))
+        pack_stream.append(buff[sync_head+1])
+        pack_stream.append(buff[sync_head+2])
         pack_stream.read(6)
         pkt_len = pack_stream.read(10).uint
+        # print "pkt_len:",pkt_len
 
-        pkt = buff[3:3 + pkt_len]
-        parity = buff[pkt_len + 3:pkt_len + 6]
-
-        remain = buff[pkt_len + 6:]
+        # pkt = buff[3:3 + pkt_len]
+        parity = buff[sync_head+pkt_len+3:sync_head+pkt_len+6]
 
         if True:  # TODO check parity
-            for d in pkt:
-                pack_stream.append(bs.pack('uint:8', ord(d)))
+            # for d in pkt:
+                # pack_stream.append(bs.pack('uint:8', ord(d)))
+                # pack_stream.append(d)
+            pack_stream.from_buffer(buff[sync_head+3:sync_head+3+pkt_len])
 
             msg = parse_rtcmv3(pack_stream)
-
-        return remain
+        
+        sync_head += pkt_len + 6
+        bar.feed(sync_head)
+    return sync_head
 
 
 def msm5_handler(type, tow):

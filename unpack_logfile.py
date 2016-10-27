@@ -4,8 +4,12 @@ from rtcm.RTCMv3_decode import resolve_rtcm3
 import tkFileDialog
 import os
 import time
+from logger import get_progress_bar
+from rtklib import resolve_rtcm3_c
 
-bytes_processed = 0
+bar = get_progress_bar()
+
+# bytes_processed = 0
 
 def calc_process(fsize):
     global bytes_processed
@@ -25,38 +29,52 @@ def parse_v1log(fn_in,fsize):
     cnt = 100000
     buff_len = 1024*64
     remain = ""
-    global bytes_processed
+    # global bytes_processed
 
     bytes_processed = 0
     f = open(fn_in,'rb')
 
-    start_calc(fsize)
+    # start_calc(fsize)
     while cnt>0:
         cnt = cnt-1
         buff = f.read(buff_len)
         if buff is None:
             break
         remain = resolve_v1(remain+buff, unpack_record)
-        bytes_processed += len(buff)
+        # bytes_processed += len(buff)
     print "done!"
     f.close()
 
 def parse_rtcm3log(fn_in,fsize):
-    cnt = 100000
-    buff_len = 1024*64
-    remain = ""
-    global bytes_processed
+    cnt = 0
+    buff_len = 1024*1024
+    buff_max = 1024*1024*480
+    remain = 0
+    # global bytes_processed
 
     f = open(fn_in,'rb')
-    start_calc(fsize)
-    while cnt>0:
-        cnt = cnt-1
-        buff = f.read(buff_len)
-        if buff is None:
-            break
-        remain = resolve_rtcm3(remain+buff)
-        bytes_processed += len(buff)
+    # if fsize < 480000000:
+    #     f_ram = f.read()
+    #     while len(f_ram)>0:
+    #         f_ram = resolve_rtcm3(f_ram)
+    #     bytes_processed += len(f_ram)
+    #     print "whole file read done! len", len(f_ram)
+    #     f.close()
+    #     return
+    # start_calc(fsize)
+    buff = f.read(buff_max)
+    bar.start(fsize)
+    # print "file size:{},buff len:{}".format(fsize,len(buff))
+    resolve_rtcm3_c(buff)
+    # while cnt>0:
+    #     cnt = cnt-1
+    #     if remain >= fsize:
+    #         break
+    #     remain += resolve_rtcm3(buff[remain:])
+    #     while len(buff)-remain>1023:
+    #         remain += resolve_rtcm3(buff[remain:])
     print "done!"
+    bar.stop()
     f.close()
 
 
