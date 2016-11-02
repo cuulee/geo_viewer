@@ -5,7 +5,7 @@ import tkFileDialog
 import os
 import time
 from logger import get_progress_bar
-from rtklib import resolve_rtcm3_c
+from rtklib.lib_interface import resolve_rtcm3_c,get_process_c
 
 bar = get_progress_bar()
 
@@ -42,7 +42,7 @@ def parse_v1log(fn_in,fsize):
             break
         remain = resolve_v1(remain+buff, unpack_record)
         # bytes_processed += len(buff)
-    print "done!"
+    # print "done!"
     f.close()
 
 def parse_rtcm3log(fn_in,fsize):
@@ -63,7 +63,8 @@ def parse_rtcm3log(fn_in,fsize):
     #     return
     # start_calc(fsize)
     buff = f.read(buff_max)
-    bar.start(fsize)
+    bar.set_cb(get_process_c)
+    bar.start_progress(fsize)
     # print "file size:{},buff len:{}".format(fsize,len(buff))
     resolve_rtcm3_c(buff)
     # while cnt>0:
@@ -73,8 +74,8 @@ def parse_rtcm3log(fn_in,fsize):
     #     remain += resolve_rtcm3(buff[remain:])
     #     while len(buff)-remain>1023:
     #         remain += resolve_rtcm3(buff[remain:])
-    print "done!"
-    bar.stop()
+    # print "done!"
+    bar.stop_progress()
     f.close()
 
 

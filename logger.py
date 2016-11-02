@@ -18,12 +18,13 @@ def init_logger(f):
     logger.setLevel(logging.DEBUG)  
 
 class SolLogger(object):
-    def __init__(self,name,ofilename,buff_size=128):
+    def __init__(self,name,ofilename=None,buff_size=128):
         self.name = name
         self.buff_size = buff_size
         self._buff = []
         self.ofile = ofilename
-        self.f = open(ofilename,'w')
+        if self.ofile is not None:
+            self.f = open(ofilename,'w')
 
     def set_file(self,fn):
         self.ofile = fn
@@ -50,27 +51,31 @@ class SolLogger(object):
         self.f.close()
 
 
-logger = SolLogger('mlog','default.log',1024)
+logger = SolLogger('mlog',buff_size=1024)
 
 def get_logger():
     return logger
 
 
 class ProgressBar(object):
-    def __init__(self):
+    def __init__(self,update_cb=None):
         self.running = False
         self.work_size = 0
         self.progress = 0
         self.marks = 0
+        self.update_cb = update_cb
         pass
 
     def register(self):
         import threading
 
-        t = threading.Thread(target=self.run)
+        t = threading.Thread(target=self.run_progress)
         t.start()
 
-    def start(self,size):
+    def set_cb(self,cb):
+        self.update_cb = cb
+
+    def start_progress(self,size):
         self.work_size = size
         self.progress = 0
         self.marks = 0
@@ -78,8 +83,9 @@ class ProgressBar(object):
 
         self.register()
 
-    def stop(self):
+    def stop_progress(self):
         self.running = False
+        print '                           \r',
 
     def feed(self,margain):
         self.progress += margain
@@ -87,14 +93,17 @@ class ProgressBar(object):
     def mark(self,cnt):
         self.marks += cnt
 
-    def run(self):
+    def run_progress(self):
         while self.running:
-            pct = self.progress * 100.0 / self.work_size
+            if self.update_cb is not None:
+                pct = self.update_cb()
+            else:
+                pct = self.progress * 100.0 / self.work_size
             print "processed: %{},lost:{}\r".format(pct,self.marks),
             if self.progress >= self.work_size:
                 # break
                 pass
-            # time.sleep(0.2)
+            time.sleep(0.1)
 
 
 bar = ProgressBar()

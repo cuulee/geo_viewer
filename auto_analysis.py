@@ -2,10 +2,9 @@ import os
 import  time
 import tkFileDialog
 import traceback
-from unpack_logfile import parse_v1log, parse_rtcm3log
 from visualization import plot_bestpos, plot_MSM
-from logger import init_logger, get_logger
-from rtklib import log_open_c,log_close_c
+# from logger import init_logger, get_logger
+from rtklib.lib_interface import log_open_c,log_close_c
 
 class TraversalResolver(object):
     def __init__(self,parser,itype='DAT',otype='csv',otype1=None):
@@ -80,6 +79,8 @@ class TraversalPloter(object):
         
 
 if __name__ == '__main__':
+    from unpack_logfile import parse_v1log, parse_rtcm3log
+
     tr = TraversalResolver(parse_v1log,'DAT','sol')
     tr.resolve("./logs")
     tr1 = TraversalResolver(parse_rtcm3log,'rtcm3','obs','nav')

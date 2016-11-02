@@ -14,7 +14,7 @@ import bitstring as bs
 # import satPosition, util, RTCMv2, positionEstimate
 import util
 import RTCMv2
-from rtklib import Bits
+from rtklib.lib_interface import Bits
 
 # from bitstring import BitStream
 from bitstream import BitStream
