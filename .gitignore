@@ -5,3 +5,7 @@
 *.log
 *.txt
 *.zip
+*.rtcm3
+*.nav
+*.obs
+*.sta
