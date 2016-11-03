@@ -1,11 +1,12 @@
 import struct
+from threading import Thread
 from generate_sol import resolve_v1, unpack_record
 from rtcm.RTCMv3_decode import resolve_rtcm3
 import tkFileDialog
 import os
 import time
 from logger import get_progress_bar
-from rtklib.lib_interface import resolve_rtcm3_c,get_process_c
+from rtklib.lib_interface import *
 
 bar = get_progress_bar()
 
@@ -45,39 +46,52 @@ def parse_v1log(fn_in,fsize):
     # print "done!"
     f.close()
 
-def parse_rtcm3log(fn_in,fsize):
+def parse_rtcm3log(fn_in):
+    t = Thread(target=_parse_rtcm3_log,args=(fn_in,))
+    t.setDaemon(True)
+    t.start()
+    
+
+def _parse_rtcm3_log(fn_in):
     cnt = 0
     buff_len = 1024*1024
     buff_max = 1024*1024*480
     remain = 0
     # global bytes_processed
 
+    t_s = time.time()
+
+    name, ext = fn_in.split(".")
+    sol_name = name + '.obs'
+    # fn_in = self.fn_rover
+    fn_out = sol_name
+    fsize = os.path.getsize(fn_in)
+    print "resolving file:", fn_in,fsize,"bytes"
+    print "output file:", fn_out
+
+    log_open_c(0,fn_out)
+    fn_out1 = name+'.nav'
+    log_open_c(1,fn_out1)
+    fn_out2 = name+'.sta'
+    log_open_c(2,fn_out2)
+
+    
     f = open(fn_in,'rb')
-    # if fsize < 480000000:
-    #     f_ram = f.read()
-    #     while len(f_ram)>0:
-    #         f_ram = resolve_rtcm3(f_ram)
-    #     bytes_processed += len(f_ram)
-    #     print "whole file read done! len", len(f_ram)
-    #     f.close()
-    #     return
-    # start_calc(fsize)
+
     buff = f.read(buff_max)
     bar.set_cb(get_process_c)
     bar.start_progress(fsize)
-    # print "file size:{},buff len:{}".format(fsize,len(buff))
+
     resolve_rtcm3_c(buff)
-    # while cnt>0:
-    #     cnt = cnt-1
-    #     if remain >= fsize:
-    #         break
-    #     remain += resolve_rtcm3(buff[remain:])
-    #     while len(buff)-remain>1023:
-    #         remain += resolve_rtcm3(buff[remain:])
-    # print "done!"
+
     bar.stop_progress()
     f.close()
+    log_close_c(0)
+    log_close_c(1)
+    log_close_c(2)
 
+    t_e = time.time()
+    print "done! time consumed:{}".format(t_e-t_s)
 
 if __name__ == '__main__':
     from logger import init_logger

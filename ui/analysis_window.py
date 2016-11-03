@@ -17,10 +17,20 @@ class AnalysisWindow(QMainWindow, Ui_Analysis):
         self.checkBox.stateChanged.connect(self.set_rover)
         self.checkBox_2.stateChanged.connect(self.set_base)
         self.resolveAllButton.clicked.connect(self.resolve_all)
+        self.sameAsInput.stateChanged.connect(self.output_chk)
+        self.obsCheck.stateChanged.connect(self.obs_chk)
+        self.navCheck.stateChanged.connect(self.nav_chk)
+        self.staCheck.stateChanged.connect(self.staInfo_chk)
+        self.reportCheck.stateChanged.connect(self.statistics_chk)
         self.fn_rover = ''
         self.fn_base = ''
         self.rov_fsize = 0
         self.base_fsize = 0
+        self.ouput_obs = self.obsCheck.isChecked()
+        self.output_nav = self.navCheck.isChecked()
+        self.output_sta = self.staCheck.isChecked()
+        self.output_report = self.reportCheck.isChecked()
+        
 
     def run_printer(self):
         pass
@@ -34,8 +44,8 @@ class AnalysisWindow(QMainWindow, Ui_Analysis):
     def file_picker(self):
         pass
 
-    def set_progress(self):
-        pass
+    def set_progress(self,val):
+        self.progressBar.setValue(val)
 
     def get_current_loop(self):
         return self.test_control.loop
@@ -56,6 +66,38 @@ class AnalysisWindow(QMainWindow, Ui_Analysis):
         else:
             self.filePickerButton2.setEnabled(False)
             self.basePath.setEnabled(False)
+
+    def output_chk(self,val):
+        if val:
+            self.outputPath.setEnabled(False)
+            self.filePickerButton3.setEnabled(False)
+        else:
+            self.outputPath.setEnabled(True)
+            self.filePickerButton3.setEnabled(True)
+
+    def staInfo_chk(self,val):
+        if val:
+            self.output_sta = True
+        else:
+            self.output_sta = False
+
+    def obs_chk(self,val):
+        if val:
+            self.output_obs = True
+        else:
+            self.output_obs = False
+
+    def nav_chk(self,val):
+        if val:
+            self.output_nav = True
+        else:
+            self.output_nav = False
+
+    def statistics_chk(self,val):
+        if val:
+            self.output_report = True
+        else:
+            self.output_report = False
 
     def file_picker(self):
         if settings.contains('analysis/basePath'):
